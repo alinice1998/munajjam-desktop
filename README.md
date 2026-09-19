@@ -1,72 +1,142 @@
-# مُنجّم | محطة التزمين القرآني الذكي (Munajjam Quran Alignment Workstation)
+# Munajjam Desktop | AI-Powered Quranic Audio-Text Alignment Platform
 
-منظومة متطورة مفتوحة المصدر لتزمين ومحاذاة التلاوات القرآنية بدقة متناهية على مستوى الآيات والوقف والنَّفَس والكلمات، تجمع بين واجهة مكتبية تفاعلية حديثة مبنية بـ **Flutter** ومحرك ذكاء اصطناعي هجين فائق الدقة مبني بـ **Python** ونماذج **ONNX Runtime** المتسارعة بالـ GPU.
+[![Flutter](https://img.shields.io/badge/Flutter-Desktop%20Windows-02569B?logo=flutter&logoColor=white)](https://flutter.dev/)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Local%20Engine-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![ONNX Runtime](https://img.shields.io/badge/ONNX%20Runtime-DirectML%20%2F%20CUDA-005CED?logo=onnx&logoColor=white)](https://onnxruntime.ai/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
+
+An advanced, open-source workstation designed for precise, millisecond-accurate forced alignment of Holy Quran recitations at the Ayah, Waqf (breath), and Word levels.
+
+**Munajjam Desktop** bridges modern **Flutter Desktop** UI aesthetics with a cutting-edge **Python & ONNX Runtime** neural audio processing backend, offering real-time waveform visualization, interactive time correction (QA Editor), and batch processing for complete Quran recitations (Khatmas).
 
 ---
 
-## 🌟 محركات التزمين المتوفرة
+## 🌟 Alignment Engines
 
-| المحرك | المعرف (`id`) | النوع | التقنية والميزات |
+Munajjam offers tailored alignment engines for different hardware setups and recitation styles:
+
+| Engine | Identifier | Status | Technology & Highlights |
 | :--- | :---: | :---: | :--- |
-| **المحرك الهجين فائق الدقة (مُنجّم v2)** | `hybrid` | **الافتراضي (موصى به)** | تقطيع الأنفاس والوقف العصبي عبر `recitation-segmenter-v2` (GPU) + كشف الأركان بـ Zipformer v3 + تدقيق مجهري قسري بـ Wav2Vec2 XLSR-53. |
-| **المحرك التجريبي الذكي (الضبابي Fuzzy)** | `hybrid_fuzzy` | **تجريبي** | تقطيع الأنفاس العصبي + تفريغ Zipformer الحر ومطابقة تقريبية مرنة (للتعامل الفائق مع تلاوات التحقيق الصعبة وتكرار المقاطع). |
-| **محرك Zipformer الكلاسيكي (فائق السرعة)** | `zipformer` | **خفيف وسريع** | تزمين مباشر بنموذج `QuranLab/zipformer_p-arabic-v3` فقط، يعمل بخفة متناهية على أي معالج عادي (CPU) دون الحاجة لبطاقات رسوميات. |
+| **High-Precision Hybrid Engine (Munajjam v2)** | `hybrid` | **Default (Recommended)** | Neural breath & waqf segmentation via `recitation-segmenter-v2` (GPU accelerated) + Zipformer v3 landmark detection + Wav2Vec2 forced micro-alignment. |
+| **Smart Experimental Engine (Fuzzy Matching)** | `hybrid_fuzzy` | **Experimental** | Neural breath segmentation + Zipformer CTC free-text decoding with dynamic Levenshtein fuzzy matching. Ideal for slow *Tahqiq* recitations and verse repetitions. |
+| **Classic Zipformer Engine** | `zipformer` | **Lightweight & Fast** | Direct phoneme/word alignment powered by `QuranLab/zipformer_p-arabic-v3`. Runs lightning-fast on any standard CPU without requiring dedicated GPU hardware. |
+| **Pre-computed JSON Import** | `json_file` | **Import Tool** | Instantly load, visualize, audit, and fine-tune existing alignment JSON files in the interactive waveform editor. |
 
 ---
 
-## 🏗️ مكونات النظام (Architecture)
+## 🚀 Key Features
 
-1. **تطبيق سطح المكتب (`munajjam_desktop`):**
-   - واجهة مستخدم احترافية بالكامل عبر Flutter Desktop (Windows).
-   - مشغل صوتي متزامن مع Waveform ومحرر بصري متقدم للتوقيتات (QA Editor).
-   - نافذة مخصصة لتزمين الختمات الكاملة والدفعات الجماعية (Batch Alignment) مع ميزة إيقاف تشغيل الحاسوب التلقائي وحفظ ملف الـ Manifest.
-   - دعم كامل للغتين (العربية والإنجليزية) مع التبديل اللحظي.
-
-2. **محرك الذكاء الاصطناعي والخادم المحلي (`munajjam_server.py` & `hybrid_aligner`):**
-   - خادم FastAPI محلي يتواصل مع الواجهة عبر واجهات REST API مع بث نسبة التقدم اللحظية بدقة الفريم.
-   - تسريع عتادي مباشر عبر `DirectML` و `ONNXRuntime` لدعم كروت الشاشة الحديثة.
-
-3. **بيانات المصحف الشريف (`data/`):**
-   - نصوص القرآن الكريم كاملة بروايتي حفص عن عاصم وورش عن نافع مع توكنات التزمين.
+* **Desktop Native Performance**: Built with Flutter for Windows, featuring smooth animations, modern dark mode, and responsive layout.
+* **Smart Filename Surah Detection**: Intelligent heuristic detector recognizes Surah names and numbers from complex filename patterns (e.g., `_001`, `سورة يس`, `طه.mp3`, `112_Al-Ikhlas`).
+* **Interactive Waveform & QA Editor**: Visual timeline showing word and ayah boundaries with zoom, drag-and-drop boundary adjustment, playback scrubbing, and instant playback.
+* **Karaoke-Style Audio Player**: Synchronized word-by-word visual highlight during playback.
+* **Batch Khatma Alignment**: Queue dozens or hundreds of Surahs for automated alignment with automatic computer shutdown upon completion and export manifest generation.
+* **Dual Riwaya Support**: Built-in, fully verified Quranic text and glyph tokens for both **Hafs 'an 'Asim** and **Warsh 'an Nafi'**.
+* **Bilingual UI**: Complete Arabic and English interface with instantaneous runtime locale switching.
+* **Hardware-Accelerated Backend**: Runs ONNX models via Microsoft DirectML (supporting modern AMD, Intel, and NVIDIA GPUs) or CUDA.
 
 ---
 
-## 🚀 التشغيل والتطوير للمطورين
+## 🏗️ Repository Architecture
 
-### 1. إعداد خادم الذكاء الاصطناعي
+```text
+munajjam-desktop/
+├── backend/                      # Python AI Engine & Backend Server
+│   ├── hybrid_aligner/           # Neural pipeline, segmentation & forced aligner
+│   ├── munajjam_server.py        # Local FastAPI REST API server
+│   ├── neural_aligner.py         # Zipformer neural alignment wrapper
+│   ├── download_models.py        # Script to download pre-trained models
+│   ├── upload_models_to_hf.py    # Script to publish models to Hugging Face
+│   └── requirements.txt          # Python dependencies
+├── lib/                          # Flutter Desktop source code
+│   ├── core/                     # Architecture, themes, localization, and server manager
+│   ├── models/                   # Data structures and Surah detector
+│   ├── providers/                # State management (ChangeNotifiers)
+│   ├── services/                 # Audio, API, and batch services
+│   └── views/                    # Screens, waveform editor, and dialogs
+├── assets/                       # Quran texts (Hafs/Warsh) and application icons
+├── data/                         # Shared Quran reference datasets
+├── test/                         # Automated unit and integration tests
+├── windows/                      # Windows runner and native C++ configurations
+├── installer.iss                 # Inno Setup Windows installer script
+├── run_local.bat                 # One-click launcher for the backend server
+├── pubspec.yaml                  # Flutter dependencies and asset definitions
+└── README.md
+```
+
+---
+
+## 🛠️ Getting Started
+
+### Prerequisites
+
+* [Flutter SDK](https://flutter.dev/docs/get-started/install/windows) (v3.19+ recommended)
+* [Python 3.9 - 3.12](https://www.python.org/downloads/)
+* [Git](https://git-scm.com/)
+
+### 1. Set Up the Python AI Backend
+
 ```bash
-# تثبيت الحزم المطلوبة
+# Navigate to the backend directory
+cd backend
+
+# Install Python requirements
 pip install -r requirements.txt
 
-# تحميل النماذج (Zipformer & Recitation Segmenter)
+# Download required AI models
 python download_models.py
 
-# تشغيل الخادم
+# Start the local server
 python munajjam_server.py
 ```
-*(أو لمستخدمي ويندوز: انقر نقراً مزدوجاً على `run_local.bat` لتنفيذ كل ما سبق تلقائياً).*
+*(On Windows, you can also double-click `run_local.bat` in the project root to perform this automatically).*
 
-### 2. تشغيل واجهة فلاتر المكتبية
+### 2. Run the Desktop Application
+
+From the root directory:
+
 ```bash
-cd munajjam_desktop
+# Fetch Flutter packages
 flutter pub get
+
+# Launch Flutter Desktop in Debug Mode
 flutter run -d windows
 ```
 
+The application will automatically detect, initialize, and communicate with the local backend server.
+
 ---
 
-## 📦 بناء حزمة التثبيت للمستخدم النهائي (Installer)
+## 🧠 AI Models
 
-يتم حزم التطبيق والخادم والنماذج في ملف تثبيت واحد عبر **Inno Setup**:
-1. قم ببناء نسخة الإنتاج من فلاتر:
+Pre-exported, GPU-optimized ONNX models for Munajjam are available on Hugging Face:
+
+* **Repository**: [`Alimalas/munajjam-onnx-models`](https://huggingface.co/Alimalas/munajjam-onnx-models)
+* **Zipformer v3**: `Quran-Lab/zipformer_p-arabic-v3`
+* **Recitation Segmenter v2**: `obadx/recitation-segmenter-v2`
+* **Silero VAD**: Voice activity detection engine
+
+---
+
+## 📦 Building the Windows Standalone Installer
+
+The desktop application, embedded runtime, and engines can be packaged into a single, offline Windows installer using **Inno Setup**:
+
+1. Build the Flutter Windows Release executable:
    ```bash
-   cd munajjam_desktop
    flutter build windows --release
    ```
-2. افتح ملف `munajjam_desktop/installer.iss` في برنامج **Inno Setup Compiler** واضغط **Compile**.
-3. سيتم إنشاء ملف التثبيت النهائي داخل مجلد `installer_output/`.
+2. Open `installer.iss` in **Inno Setup Compiler** and click **Compile**.
+3. The standalone setup executable will be generated in `installer_output/`.
 
 ---
 
-## 📄 الترخيص (License)
-مشروع حر ومفتوح المصدر مخصص لخدمة كتاب الله عز وجل والباحثين في معالجة الصوتيات القرآنية.
+## 👨‍💻 Author & Credits
+
+* **Author**: Ali Malas (علي ملص) - [Itqan Projects](https://github.com/alinice1998)
+* Dedicated to serving the Holy Quran, its reciters, researchers, and developers in Arabic Speech Processing.
+
+## 📄 License
+
+This project is licensed under the [Apache License 2.0](LICENSE).
