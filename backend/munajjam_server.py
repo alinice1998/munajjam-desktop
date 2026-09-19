@@ -95,11 +95,16 @@ async def lifespan(app: FastAPI):
         get_aligner()
     except Exception as e:
         print(f"[-] Startup Zipformer initialization note: {e}")
-    try:
-        print("[*] Pre-loading Next-Gen Hybrid neural aligner (Segmenter v2 + Zipformer + Wav2Vec2 on GPU)...")
-        get_hybrid_aligner()
-    except Exception as e:
-        print(f"[-] Startup Hybrid initialization note: {e}")
+    # 2. تحميل محركات التزمين الهجينة الضخمة في الخلفية دون تعطيل إطلاق السيرفر
+    def _bg_hybrid_load():
+        try:
+            print("[*] Background pre-loading Next-Gen Hybrid neural aligner (Segmenter v2 + Zipformer + Wav2Vec2 on GPU)...")
+            get_hybrid_aligner()
+            print("[+] Next-Gen Hybrid neural aligner is fully pre-loaded and ready!")
+        except Exception as e:
+            print(f"[-] Startup Hybrid initialization note: {e}")
+
+    threading.Thread(target=_bg_hybrid_load, daemon=True).start()
     yield
 
 app = FastAPI(

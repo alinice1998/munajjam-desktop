@@ -123,7 +123,7 @@ class ServerManager {
             serverArgs,
             workingDirectory: workingDir,
             mode: ProcessStartMode.detached,
-            runInShell: false,
+            runInShell: true,
           );
         } catch (_) {
           _serverProcess = await Process.start(
@@ -131,7 +131,7 @@ class ServerManager {
             serverArgs,
             workingDirectory: workingDir,
             mode: ProcessStartMode.detached,
-            runInShell: false,
+            runInShell: true,
           );
         }
       } else {
@@ -142,8 +142,8 @@ class ServerManager {
 
       debugPrint('Launched background server process pid: ${_serverProcess?.pid}');
 
-      // Poll until online (up to 35 seconds)
-      for (int i = 0; i < 40; i++) {
+      // Poll until online (up to 40 seconds)
+      for (int i = 0; i < 50; i++) {
         await Future.delayed(const Duration(milliseconds: 800));
         if (await checkHealth()) {
           _isOnline = true;
