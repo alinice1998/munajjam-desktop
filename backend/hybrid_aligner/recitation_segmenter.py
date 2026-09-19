@@ -34,7 +34,9 @@ class QuranRecitationSegmenter:
         pad_duration_ms: int = 30
     ):
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.model_dir = model_dir_or_name or os.path.join(base_dir, "model_segmenter")
+        parent_dir = os.path.dirname(base_dir)
+        default_dir = os.path.join(base_dir, "model_segmenter") if os.path.exists(os.path.join(base_dir, "model_segmenter")) else os.path.join(parent_dir, "model_segmenter")
+        self.model_dir = model_dir_or_name or default_dir
         self.device = device
         self.min_silence_duration_ms = min_silence_duration_ms
         self.min_speech_duration_ms = min_speech_duration_ms

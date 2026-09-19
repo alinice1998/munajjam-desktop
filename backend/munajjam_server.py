@@ -36,8 +36,19 @@ from neural_aligner import ZipformerNeuralAligner
 
 # Base Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_DIR = os.path.join(BASE_DIR, "model_zipformer")
-DATA_DIR = os.path.join(BASE_DIR, "data")
+
+def resolve_dir(dir_name: str) -> str:
+    """البحث عن مجلد النماذج أو البيانات داخل مجلد السيرفر أولاً ثم في المجلد الأصلي للمشروع"""
+    p1 = os.path.join(BASE_DIR, dir_name)
+    if os.path.exists(p1):
+        return p1
+    p2 = os.path.join(os.path.dirname(BASE_DIR), dir_name)
+    if os.path.exists(p2):
+        return p2
+    return p1
+
+MODEL_DIR = resolve_dir("model_zipformer")
+DATA_DIR = resolve_dir("data")
 
 aligner_instance: Optional[ZipformerNeuralAligner] = None
 hybrid_aligner_instance: Optional[Any] = None
@@ -50,7 +61,9 @@ def get_aligner() -> ZipformerNeuralAligner:
     global aligner_instance, model_error
     if aligner_instance is None:
         try:
+            print(f"[*] Loading Zipformer Neural Aligner from: {MODEL_DIR}")
             aligner_instance = ZipformerNeuralAligner(MODEL_DIR)
+            model_error = None
         except Exception as e:
             model_error = str(e)
             print(f"[-] Error loading Zipformer aligner: {e}")
@@ -62,9 +75,9 @@ def get_hybrid_aligner():
     if hybrid_aligner_instance is None:
         try:
             from hybrid_aligner import HybridQuranAligner
-            wav2vec2_dir = os.path.join(BASE_DIR, "model_wav2vec2")
+            wav2vec2_dir = resolve_dir("model_wav2vec2")
             target_model = wav2vec2_dir if (os.path.exists(wav2vec2_dir) and (os.path.exists(os.path.join(wav2vec2_dir, "model.onnx")) or os.path.exists(os.path.join(wav2vec2_dir, "config.json")))) else "jonatasgrosman/wav2vec2-large-xlsr-53-arabic"
-            segmenter_dir = os.path.join(BASE_DIR, "model_segmenter")
+            segmenter_dir = resolve_dir("model_segmenter")
             hybrid_aligner_instance = HybridQuranAligner(
                 zipformer_dir=MODEL_DIR,
                 wav2vec2_dir_or_name=target_model,

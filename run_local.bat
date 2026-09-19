@@ -5,6 +5,9 @@ echo   تشغيل خادم مُنجّم للتزمين القرآني (Munajjam 
 echo ========================================================
 echo.
 
+:: الانتقال إلى مجلد الباك اند
+cd /d "%~dp0backend"
+
 :: 1. التحقق من وجود بايثون
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
@@ -18,16 +21,16 @@ if %errorlevel% neq 0 (
 echo [*] فحص وتثبيت المتطلبات من requirements.txt...
 pip install -r requirements.txt
 
-:: 3. تحميل النموذج إذا لم يكن محملاً
-if not exist "model_zipformer\tokens.txt" (
+:: 3. تحميل النماذج إذا لم تكن موجودة
+if not exist "..\model_zipformer\tokens.txt" if not exist "model_zipformer\tokens.txt" (
     echo [*] جاري تحميل ملفات النموذج من Hugging Face...
-    python download_model.py
+    python download_models.py
 )
 
 :: 4. تشغيل السيرفر
 echo.
-echo [*] جاري تشغيل الخادم المحلي...
-echo الرابط المحلي للواجهة: http://localhost:8000
+echo [*] جاري تشغيل خادم الذكاء الاصطناعي...
+echo الرابط المحلي: http://localhost:8000
 echo.
 python munajjam_server.py
 

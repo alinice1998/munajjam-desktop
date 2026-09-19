@@ -7,6 +7,10 @@ model_segmenter/
 model_zipformer/
 model_wav2vec2/
 model_vad/
+backend/model_segmenter/
+backend/model_zipformer/
+backend/model_wav2vec2/
+backend/model_vad/
 *.7z
 *.onnx
 *.bin
@@ -15,7 +19,9 @@ model_vad/
 
 # 2. Binaries, Standalone Runtimes & Installers
 python_runtime/
+backend/python_runtime/
 ffmpeg.exe
+backend/ffmpeg.exe
 installer_output/
 *.exe
 *.dll
@@ -35,6 +41,8 @@ ground_truth_*.json
 
 # 5. Python Environment & Caches
 __pycache__/
+backend/__pycache__/
+backend/hybrid_aligner/__pycache__/
 *.py[cod]
 *$py.class
 venv/
@@ -42,12 +50,12 @@ env/
 .env
 
 # 6. Flutter & Dart Build Artifacts
-munajjam_desktop/build/
-munajjam_desktop/.dart_tool/
-munajjam_desktop/.flutter-plugins
-munajjam_desktop/.flutter-plugins-dependencies
-munajjam_desktop/windows/flutter/ephemeral/
-munajjam_desktop/*.iml
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+windows/flutter/ephemeral/
+*.iml
 .packages
 
 # 7. Sub-projects with separate repos

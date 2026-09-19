@@ -29,7 +29,7 @@ SetupIconFile=windows\runner\resources\app_icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 ; Output Settings
-OutputDir=..\installer_output
+OutputDir=installer_output
 OutputBaseFilename=Munajjam_Desktop_Setup_v{#MyAppVersion}
 Compression=lzma2/fast
 SolidCompression=no
@@ -59,29 +59,24 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; 2. Python Backend & Engine Scripts
-Source: "..\munajjam_server.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\neural_aligner.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\start_server_gpu1.bat"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "..\ffmpeg.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\hybrid_aligner\*"; DestDir: "{app}\hybrid_aligner"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; 3. Embedded Python Runtime (100% Standalone Offline)
-Source: "..\python_runtime\*"; DestDir: "{app}\python_runtime"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
-Source: "..\backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+; 3. Embedded Python Runtime & Tools
+Source: "python_runtime\*"; DestDir: "{app}\python_runtime"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+Source: "ffmpeg.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 ; 4. Data & Quran Text
-Source: "..\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; 5. Optimized AI Models (ONNX Engines Only - Excludes Redundant PyTorch .bin/.safetensors/.cache)
-Source: "..\model_zipformer\*"; DestDir: "{app}\model_zipformer"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\model_wav2vec2\*"; DestDir: "{app}\model_wav2vec2"; Excludes: "pytorch_model.bin, *.pt"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\model_segmenter\*"; DestDir: "{app}\model_segmenter"; Excludes: ".cache, *.safetensors, *.pt"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\model_vad\*"; DestDir: "{app}\model_vad"; Flags: ignoreversion recursesubdirs createallsubdirs
+; 5. Optimized AI Models (ONNX Engines Only)
+Source: "model_zipformer\*"; DestDir: "{app}\model_zipformer"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+Source: "model_wav2vec2\*"; DestDir: "{app}\model_wav2vec2"; Excludes: "pytorch_model.bin, *.pt"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+Source: "model_segmenter\*"; DestDir: "{app}\model_segmenter"; Excludes: ".cache, *.safetensors, *.pt"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+Source: "model_vad\*"; DestDir: "{app}\model_vad"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
-Name: "{group}\تشغيل خادم الذكاء الاصطناعي يدوياً (GPU 1)"; Filename: "{app}\start_server_gpu1.bat"; WorkingDir: "{app}"
+Name: "{group}\تشغيل خادم الذكاء الاصطناعي يدوياً (GPU 1)"; Filename: "{app}\backend\start_server_gpu1.bat"; WorkingDir: "{app}\backend"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"; WorkingDir: "{app}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; WorkingDir: "{app}"
 

@@ -45,9 +45,10 @@ class ServerManager {
   String _resolveAppRootDir() {
     try {
       final exeDir = File(Platform.resolvedExecutable).parent.path;
-      if (File('$exeDir\\munajjam_server.py').existsSync() ||
-          File('$exeDir\\munajjam_server.exe').existsSync() ||
-          File('$exeDir\\backend\\munajjam_server.exe').existsSync()) {
+      if (File('$exeDir\\backend\\munajjam_server.py').existsSync() ||
+          File('$exeDir\\munajjam_server.py').existsSync() ||
+          File('$exeDir\\backend\\munajjam_server.exe').existsSync() ||
+          File('$exeDir\\munajjam_server.exe').existsSync()) {
         return exeDir;
       }
     } catch (_) {}
@@ -84,13 +85,17 @@ class ServerManager {
       final backendExe = File('$rootDir\\backend\\munajjam_server.exe');
       final standaloneExe = File('$rootDir\\munajjam_server.exe');
       final embeddedPythonw = File('$rootDir\\python_runtime\\pythonw.exe');
-      final scriptFile = File('$rootDir\\munajjam_server.py');
+      final backendScript = File('$rootDir\\backend\\munajjam_server.py');
+      final rootScript = File('$rootDir\\munajjam_server.py');
+
+      final scriptFile = backendScript.existsSync() ? backendScript : rootScript;
+      final workingDir = backendScript.existsSync() ? '$rootDir\\backend' : rootDir;
 
       if (await backendExe.exists()) {
         _serverProcess = await Process.start(
           backendExe.path,
           ['--parent-pid', pid.toString()],
-          workingDirectory: rootDir,
+          workingDirectory: '$rootDir\\backend',
           mode: ProcessStartMode.detached,
           runInShell: false,
         );
@@ -105,18 +110,18 @@ class ServerManager {
       } else if (await embeddedPythonw.exists() && await scriptFile.exists()) {
         _serverProcess = await Process.start(
           embeddedPythonw.path,
-          ['munajjam_server.py', '--parent-pid', pid.toString()],
-          workingDirectory: rootDir,
+          [scriptFile.path, '--parent-pid', pid.toString()],
+          workingDirectory: workingDir,
           mode: ProcessStartMode.detached,
           runInShell: false,
         );
       } else if (await scriptFile.exists()) {
-        final serverArgs = ['munajjam_server.py', '--parent-pid', pid.toString()];
+        final serverArgs = [scriptFile.path, '--parent-pid', pid.toString()];
         try {
           _serverProcess = await Process.start(
             'pythonw',
             serverArgs,
-            workingDirectory: rootDir,
+            workingDirectory: workingDir,
             mode: ProcessStartMode.detached,
             runInShell: false,
           );
@@ -124,7 +129,7 @@ class ServerManager {
           _serverProcess = await Process.start(
             'python',
             serverArgs,
-            workingDirectory: rootDir,
+            workingDirectory: workingDir,
             mode: ProcessStartMode.detached,
             runInShell: false,
           );
