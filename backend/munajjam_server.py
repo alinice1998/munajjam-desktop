@@ -6,6 +6,20 @@ FastAPI Server for Munajjam Quranic Audio Alignment Engine
 import os
 import sys
 
+# Ensure sys.stdout and sys.stderr exist (especially when launched via pythonw)
+_log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "server.log")
+if sys.stdout is None:
+    try:
+        sys.stdout = open(_log_path, "a", encoding="utf-8")
+    except Exception:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+
+if sys.stderr is None:
+    try:
+        sys.stderr = open(_log_path, "a", encoding="utf-8")
+    except Exception:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
 # Ensure UTF-8 output on Windows consoles
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -206,8 +220,9 @@ def convert_audio_to_wav(input_path: str, output_path: str) -> bool:
     """تحويل أي صيغة صوتية إلى WAV 16kHz Mono بسرعة فائقة باستخدام FFmpeg أو SoundFile"""
     # 1. التجربة الأولى: FFmpeg الفائق السرعة (أقل من ثانية وبدون إظهار أي نافذة كونسول)
     try:
-        import subprocess
         local_ffmpeg = os.path.join(BASE_DIR, "ffmpeg.exe")
+        if not os.path.exists(local_ffmpeg):
+            local_ffmpeg = os.path.join(os.path.dirname(BASE_DIR), "ffmpeg.exe")
         ffmpeg_bin = local_ffmpeg if os.path.exists(local_ffmpeg) else "ffmpeg"
         kwargs = {}
         if sys.platform == "win32":

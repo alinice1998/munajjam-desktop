@@ -43,6 +43,8 @@ ground_truth_*.json
 __pycache__/
 backend/__pycache__/
 backend/hybrid_aligner/__pycache__/
+*.log
+backend/*.log
 *.py[cod]
 *$py.class
 venv/

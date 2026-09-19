@@ -44,20 +44,36 @@ class ServerManager {
 
   String _resolveAppRootDir() {
     try {
-      final exeDir = File(Platform.resolvedExecutable).parent.path;
-      if (File('$exeDir\\backend\\munajjam_server.py').existsSync() ||
-          File('$exeDir\\munajjam_server.py').existsSync() ||
-          File('$exeDir\\backend\\munajjam_server.exe').existsSync() ||
-          File('$exeDir\\munajjam_server.exe').existsSync()) {
-        return exeDir;
+      Directory dir = File(Platform.resolvedExecutable).parent;
+      for (int i = 0; i < 6; i++) {
+        if (File('${dir.path}\\backend\\munajjam_server.py').existsSync() ||
+            File('${dir.path}\\munajjam_server.py').existsSync() ||
+            File('${dir.path}\\backend\\munajjam_server.exe').existsSync() ||
+            File('${dir.path}\\munajjam_server.exe').existsSync()) {
+          return dir.path;
+        }
+        final parent = dir.parent;
+        if (parent.path == dir.path) break;
+        dir = parent;
       }
     } catch (_) {}
 
-    String currentDir = Directory.current.path;
-    if (currentDir.endsWith('munajjam_desktop')) {
-      return Directory(currentDir).parent.path;
-    }
-    return currentDir;
+    try {
+      Directory dir = Directory.current;
+      for (int i = 0; i < 6; i++) {
+        if (File('${dir.path}\\backend\\munajjam_server.py').existsSync() ||
+            File('${dir.path}\\munajjam_server.py').existsSync() ||
+            File('${dir.path}\\backend\\munajjam_server.exe').existsSync() ||
+            File('${dir.path}\\munajjam_server.exe').existsSync()) {
+          return dir.path;
+        }
+        final parent = dir.parent;
+        if (parent.path == dir.path) break;
+        dir = parent;
+      }
+    } catch (_) {}
+
+    return Directory.current.path;
   }
 
   Future<void> initAndStartServer({String? serverScriptPath}) async {
@@ -123,7 +139,7 @@ class ServerManager {
             serverArgs,
             workingDirectory: workingDir,
             mode: ProcessStartMode.detached,
-            runInShell: true,
+            runInShell: false,
           );
         } catch (_) {
           _serverProcess = await Process.start(
@@ -131,7 +147,7 @@ class ServerManager {
             serverArgs,
             workingDirectory: workingDir,
             mode: ProcessStartMode.detached,
-            runInShell: true,
+            runInShell: false,
           );
         }
       } else {

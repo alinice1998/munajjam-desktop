@@ -12,7 +12,9 @@ class SileroVADDetector:
     def __init__(self, model_path: Optional[str] = None):
         if model_path is None:
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            model_path = os.path.join(base_dir, "model_vad", "silero_vad.onnx")
+            p1 = os.path.join(base_dir, "model_vad", "silero_vad.onnx")
+            p2 = os.path.join(os.path.dirname(base_dir), "model_vad", "silero_vad.onnx")
+            model_path = p1 if os.path.exists(p1) else p2
         
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Silero VAD model not found at {model_path}")
