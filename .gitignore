@@ -1,0 +1,60 @@
+# =====================================================================
+# Munajjam Quran Alignment - Git Ignore Rules
+# =====================================================================
+
+# 1. AI Models & Large Weight Files (>100MB)
+model_segmenter/
+model_zipformer/
+model_wav2vec2/
+model_vad/
+*.7z
+*.onnx
+*.bin
+*.pt
+*.safetensors
+
+# 2. Binaries, Standalone Runtimes & Installers
+python_runtime/
+ffmpeg.exe
+installer_output/
+*.exe
+*.dll
+
+# 3. Audio & Sample Media
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.flac
+*.ogg
+
+# 4. Scratch & Test Output Data
+scratch/
+*_alignment.json
+ground_truth_*.json
+
+# 5. Python Environment & Caches
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# 6. Flutter & Dart Build Artifacts
+munajjam_desktop/build/
+munajjam_desktop/.dart_tool/
+munajjam_desktop/.flutter-plugins
+munajjam_desktop/.flutter-plugins-dependencies
+munajjam_desktop/windows/flutter/ephemeral/
+munajjam_desktop/*.iml
+.packages
+
+# 7. Sub-projects with separate repos
+Munajjam-Website/
+
+# 8. IDE & Operating System
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

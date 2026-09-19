@@ -1,0 +1,46 @@
+name: munajjam_desktop
+description: "منصة منجم للتزمين القرآني الذكي - تطبيق سطح المكتب"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Audio & Media
+  audioplayers: ^6.1.1
+
+  # Network & API
+  http: ^1.2.2
+
+  # Desktop & Filesystem
+  file_picker: ^8.1.7
+  path_provider: ^2.1.5
+  path: ^1.9.0
+  window_manager: ^0.4.3
+  shared_preferences: ^2.3.5
+
+  # State Management & Fonts
+  provider: ^6.1.2
+  google_fonts: ^6.2.1
+  intl: ^0.20.2
+
+  # Icons & Styling
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/data/
+    - assets/icons/
