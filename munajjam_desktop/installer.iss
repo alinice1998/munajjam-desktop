@@ -64,11 +64,10 @@ Source: "..\neural_aligner.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\start_server_gpu1.bat"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "..\ffmpeg.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\hybrid_aligner\*"; DestDir: "{app}\hybrid_aligner"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\hybrid_aligner\*"; DestDir: "{app}\hybrid_aligner"; Excludes: "__pycache__, *.pyc"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; 3. Embedded Python Runtime (100% Standalone Offline)
-Source: "..\python_runtime\*"; DestDir: "{app}\python_runtime"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
-Source: "..\backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+Source: "..\python_runtime\*"; DestDir: "{app}\python_runtime"; Excludes: "__pycache__, *.pyc"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 
 ; 4. Data & Quran Text
 Source: "..\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
