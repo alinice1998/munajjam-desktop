@@ -38,13 +38,17 @@
 # تثبيت الحزم المطلوبة
 pip install -r requirements.txt
 
-# تحميل النماذج (Zipformer & Recitation Segmenter)
+# تحميل النماذج المجهزة بصيغة ONNX DirectML (حزمة نماذج مُنجّم الرسمية)
 python download_models.py
 
 # تشغيل الخادم
 python munajjam_server.py
 ```
 *(أو لمستخدمي ويندوز: انقر نقراً مزدوجاً على `run_local.bat` لتنفيذ كل ما سبق تلقائياً).*
+
+> **ملاحظة:** يتم تنزيل كافة النماذج العصبية المجهزة تلقائياً من المستودع الرسمي المفتوح على Hugging Face:
+> [`Alimalas/munajjam-onnx-models`](https://huggingface.co/Alimalas/munajjam-onnx-models)
+> بصيغة ONNX فائقة السرعة ودون الحاجة إلى مفاتيح وصول (Tokens) أو أي خطوات تصدير إضافية.
 
 ### 2. تشغيل واجهة فلاتر المكتبية
 ```bash

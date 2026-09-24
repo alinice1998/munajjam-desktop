@@ -18,12 +18,22 @@ if %errorlevel% neq 0 (
 echo [*] فحص وتثبيت المتطلبات من requirements.txt...
 pip install -r requirements.txt
 
-:: 3. تحميل النموذج إذا لم يكن محملاً
-if not exist "model_zipformer\tokens.txt" (
-    echo [*] جاري تحميل ملفات النموذج من Hugging Face...
-    python download_model.py
+:: 3. التحقق من وجود النماذج العصبية وتحميلها
+if not exist "model_zipformer\tokens.txt" goto download_models
+if not exist "model_segmenter\model.onnx" goto download_models
+if not exist "model_vad\silero_vad.onnx" goto download_models
+goto start_server
+
+:download_models
+echo [*] جاري فحص وتحميل نماذج الذكاء الاصطناعي (ONNX) من Hugging Face...
+python download_models.py
+if %errorlevel% neq 0 (
+    echo [X] فشل في تحميل النماذج. يرجى التحقق من اتصال الإنترنت.
+    pause
+    exit /b
 )
 
+:start_server
 :: 4. تشغيل السيرفر
 echo.
 echo [*] جاري تشغيل الخادم المحلي...
