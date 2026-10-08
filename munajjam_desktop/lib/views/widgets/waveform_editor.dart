@@ -10,6 +10,7 @@ import '../../providers/alignment_provider.dart';
 import '../../services/audio_service.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'waveform_painter.dart';
+import 'repetitions_modal.dart';
 
 enum MarkerActionMode {
   moveNearest,
@@ -31,6 +32,9 @@ class _WaveformEditorState extends State<WaveformEditor> {
   double _pixelsPerSecond = 60.0;
   final double _minPps = 20.0;
   final double _maxPps = 250.0;
+  double _waveformHeight = 180.0;
+  final double _minWaveformHeight = 120.0;
+  final double _maxWaveformHeight = 500.0;
 
   int? _draggingIndex;
   int? _draggingWordAyahIndex;
@@ -92,13 +96,35 @@ class _WaveformEditorState extends State<WaveformEditor> {
     }
   }
 
-  void _handleWheelZoom(PointerScrollEvent event, double mouseViewportX) {
+  double _getDynamicMinPps(double totalDuration, double viewportWidth) {
+    if (totalDuration <= 0 || viewportWidth <= 0) return 1.0;
+    final fitPps = viewportWidth / totalDuration;
+    return (fitPps * 0.98).clamp(0.01, 30.0);
+  }
+
+  void _fitEntireSurah(double totalDuration, double viewportWidth) {
+    if (totalDuration <= 0 || viewportWidth <= 0) return;
+    final fitPps = (viewportWidth / totalDuration).clamp(0.01, _maxPps);
+    setState(() {
+      _pixelsPerSecond = fitPps;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0.0);
+      }
+    });
+  }
+
+  void _handleWheelZoom(PointerScrollEvent event, double mouseViewportX, {double totalDuration = 0, double viewportWidth = 0}) {
     final scrollDelta = event.scrollDelta.dy;
     final zoomFactor = scrollDelta > 0 ? 0.85 : 1.15;
     final oldPps = _pixelsPerSecond;
-    final newPps = (oldPps * zoomFactor).clamp(_minPps, _maxPps);
+    final minLimit = (totalDuration > 0 && viewportWidth > 0)
+        ? _getDynamicMinPps(totalDuration, viewportWidth)
+        : _minPps;
+    final newPps = (oldPps * zoomFactor).clamp(minLimit, _maxPps);
 
-    if ((newPps - oldPps).abs() > 0.5) {
+    if ((newPps - oldPps).abs() > 0.05) {
       final currentScroll = _scrollController.hasClients ? _scrollController.offset : 0.0;
       final mouseAbsoluteX = currentScroll + mouseViewportX;
       final mouseTimeSec = mouseAbsoluteX / oldPps;
@@ -116,6 +142,88 @@ class _WaveformEditorState extends State<WaveformEditor> {
           _scrollController.jumpTo(newScroll);
         }
       });
+    }
+  }
+
+  void _scrollBy(double delta) {
+    if (!_scrollController.hasClients) return;
+    final target = (_scrollController.offset + delta).clamp(0.0, _scrollController.position.maxScrollExtent);
+    _scrollController.animateTo(target, duration: const Duration(milliseconds: 180), curve: Curves.easeOut);
+  }
+
+  void _ensureTimeVisible(double timeSec) {
+    if (!_scrollController.hasClients) return;
+    final targetX = timeSec * _pixelsPerSecond;
+    final currentOffset = _scrollController.offset;
+    final viewWidth = _scrollController.position.viewportDimension;
+    if (targetX < currentOffset + 50 || targetX > currentOffset + viewWidth - 50) {
+      final targetScroll = (targetX - viewWidth / 2).clamp(0.0, _scrollController.position.maxScrollExtent);
+      _scrollController.animateTo(targetScroll, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+    }
+  }
+
+  void _centerOnCurrentPosition() {
+    if (!_scrollController.hasClients) return;
+    final currentSec = AudioService().currentSeconds;
+    final targetX = currentSec * _pixelsPerSecond;
+    final viewWidth = _scrollController.position.viewportDimension;
+    final targetScroll = (targetX - viewWidth / 2).clamp(0.0, _scrollController.position.maxScrollExtent);
+    _scrollController.animateTo(targetScroll, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+  }
+
+  void _openRepetitionsModal(BuildContext context, AlignmentProvider alignProvider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => RepetitionsModal(
+        localeCode: widget.localeCode,
+        onNavigate: (timestamp) {
+          AudioService().seek(timestamp);
+          _ensureTimeVisible(timestamp);
+          alignProvider.updateCurrentTime(timestamp);
+        },
+      ),
+    );
+  }
+
+  void _handleStepBackward(AlignmentProvider alignProvider) {
+    alignProvider.stepBackward();
+    _ensureTimeVisible(AudioService().currentSeconds);
+  }
+
+  void _handleStepForward(AlignmentProvider alignProvider) {
+    alignProvider.stepForward();
+    _ensureTimeVisible(AudioService().currentSeconds);
+  }
+
+  void _jumpToNextRepetition(AlignmentProvider alignProvider) {
+    final next = alignProvider.getNextRepetition(AudioService().currentSeconds);
+    if (next != null) {
+      AudioService().seek(next);
+      _ensureTimeVisible(next);
+    }
+  }
+
+  void _jumpToPrevRepetition(AlignmentProvider alignProvider) {
+    final prev = alignProvider.getPrevRepetition(AudioService().currentSeconds);
+    if (prev != null) {
+      AudioService().seek(prev);
+      _ensureTimeVisible(prev);
+    }
+  }
+
+  void _jumpToNextError(AlignmentProvider alignProvider) {
+    final next = alignProvider.getNextError(AudioService().currentSeconds);
+    if (next != null) {
+      AudioService().seek(next);
+      _ensureTimeVisible(next);
+    }
+  }
+
+  void _jumpToPrevError(AlignmentProvider alignProvider) {
+    final prev = alignProvider.getPrevError(AudioService().currentSeconds);
+    if (prev != null) {
+      AudioService().seek(prev);
+      _ensureTimeVisible(prev);
     }
   }
 
@@ -639,6 +747,12 @@ class _WaveformEditorState extends State<WaveformEditor> {
           } else if (event.logicalKey == LogicalKeyboardKey.keyM) {
             _executeMarkerAction(alignProvider);
             return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            _handleStepBackward(alignProvider);
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            _handleStepForward(alignProvider);
+            return KeyEventResult.handled;
           }
         }
         return KeyEventResult.ignored;
@@ -874,6 +988,94 @@ class _WaveformEditorState extends State<WaveformEditor> {
                   },
                 ),
 
+                // Repetition Navigation Capsule
+                if (alignProvider.repetitionTimestamps.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.warningAmber.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.warningAmber.withOpacity(0.35)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+                          icon: const Icon(Icons.chevron_left_rounded, size: 16, color: AppColors.warningAmber),
+                          tooltip: 'التكرار السابق',
+                          onPressed: () => _jumpToPrevRepetition(alignProvider),
+                        ),
+                        InkWell(
+                          onTap: () => _openRepetitionsModal(context, alignProvider),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.repeat_rounded, size: 13, color: AppColors.warningAmber),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'تكرار (${alignProvider.repetitionTimestamps.length})',
+                                  style: const TextStyle(fontSize: 10.5, color: AppColors.warningAmber, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+                          icon: const Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.warningAmber),
+                          tooltip: 'التكرار التالي',
+                          onPressed: () => _jumpToNextRepetition(alignProvider),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Error / Low Confidence Navigation Capsule
+                if (alignProvider.errorTimestamps.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.scoreLow.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.scoreLow.withOpacity(0.35)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+                          icon: const Icon(Icons.chevron_left_rounded, size: 16, color: AppColors.scoreLow),
+                          tooltip: 'الموضع السابق ذو الدقة المنخفضة',
+                          onPressed: () => _jumpToPrevError(alignProvider),
+                        ),
+                        const Icon(Icons.priority_high_rounded, size: 13, color: AppColors.scoreLow),
+                        const SizedBox(width: 3),
+                        Text(
+                          'مراجعة (${alignProvider.errorTimestamps.length})',
+                          style: const TextStyle(fontSize: 10.5, color: AppColors.scoreLow, fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+                          icon: const Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.scoreLow),
+                          tooltip: 'الموضع التالي ذو الدقة المنخفضة',
+                          onPressed: () => _jumpToNextError(alignProvider),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 const Spacer(),
 
                 // Save Status Indicator
@@ -902,13 +1104,44 @@ class _WaveformEditorState extends State<WaveformEditor> {
                   tooltip: _autoScrollEnabled ? 'تتبع موضع القراءة نشط' : 'تتبع موضع القراءة معطل',
                 ),
 
+                // Center waveform on current playhead
+                IconButton(
+                  onPressed: _centerOnCurrentPosition,
+                  icon: const Icon(Icons.center_focus_strong_rounded, size: 17, color: AppColors.primaryEmerald),
+                  tooltip: 'الانتقال بموجات الصوت إلى موضع القراءة الحالي',
+                ),
+
                 const SizedBox(width: 4),
+
+                // Fit entire Surah button
+                IconButton(
+                  onPressed: () {
+                    double totalSec = audioService.totalSeconds;
+                    if (totalSec <= 0 && alignProvider.segments.isNotEmpty) {
+                      totalSec = alignProvider.segments.last.end;
+                    }
+                    final viewWidth = _scrollController.hasClients && _scrollController.position.hasViewportDimension
+                        ? _scrollController.position.viewportDimension
+                        : 900.0;
+                    _fitEntireSurah(totalSec, viewWidth);
+                  },
+                  icon: const Icon(Icons.fit_screen_rounded, size: 17, color: AppColors.primaryTeal),
+                  tooltip: 'ملاءمة كامل السورة للشاشة عند أقصى حد',
+                ),
 
                 // Zoom Controls & Wheel hint
                 IconButton(
                   onPressed: () {
+                    double totalSec = audioService.totalSeconds;
+                    if (totalSec <= 0 && alignProvider.segments.isNotEmpty) {
+                      totalSec = alignProvider.segments.last.end;
+                    }
+                    final viewWidth = _scrollController.hasClients && _scrollController.position.hasViewportDimension
+                        ? _scrollController.position.viewportDimension
+                        : 900.0;
+                    final dynamicMin = _getDynamicMinPps(totalSec, viewWidth);
                     setState(() {
-                      _pixelsPerSecond = (_pixelsPerSecond - 15).clamp(_minPps, _maxPps);
+                      _pixelsPerSecond = (_pixelsPerSecond - 15).clamp(dynamicMin, _maxPps);
                     });
                   },
                   icon: const Icon(Icons.zoom_out, size: 18),
@@ -923,22 +1156,40 @@ class _WaveformEditorState extends State<WaveformEditor> {
                       activeTrackColor: AppColors.primaryEmerald,
                       inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
                     ),
-                    child: Slider(
-                      value: _pixelsPerSecond,
-                      min: _minPps,
-                      max: _maxPps,
-                      onChanged: (val) {
-                        setState(() {
-                          _pixelsPerSecond = val;
-                        });
-                      },
-                    ),
+                    child: Builder(builder: (context) {
+                      double totalSec = audioService.totalSeconds;
+                      if (totalSec <= 0 && alignProvider.segments.isNotEmpty) {
+                        totalSec = alignProvider.segments.last.end;
+                      }
+                      final viewWidth = _scrollController.hasClients && _scrollController.position.hasViewportDimension
+                          ? _scrollController.position.viewportDimension
+                          : 900.0;
+                      final dynamicMin = _getDynamicMinPps(totalSec, viewWidth);
+                      return Slider(
+                        value: _pixelsPerSecond.clamp(dynamicMin, _maxPps),
+                        min: dynamicMin,
+                        max: _maxPps,
+                        onChanged: (val) {
+                          setState(() {
+                            _pixelsPerSecond = val;
+                          });
+                        },
+                      );
+                    }),
                   ),
                 ),
                 IconButton(
                   onPressed: () {
+                    double totalSec = audioService.totalSeconds;
+                    if (totalSec <= 0 && alignProvider.segments.isNotEmpty) {
+                      totalSec = alignProvider.segments.last.end;
+                    }
+                    final viewWidth = _scrollController.hasClients && _scrollController.position.hasViewportDimension
+                        ? _scrollController.position.viewportDimension
+                        : 900.0;
+                    final dynamicMin = _getDynamicMinPps(totalSec, viewWidth);
                     setState(() {
-                      _pixelsPerSecond = (_pixelsPerSecond + 15).clamp(_minPps, _maxPps);
+                      _pixelsPerSecond = (_pixelsPerSecond + 15).clamp(dynamicMin, _maxPps);
                     });
                   },
                   icon: const Icon(Icons.zoom_in, size: 18),
@@ -965,7 +1216,7 @@ class _WaveformEditorState extends State<WaveformEditor> {
                 final canvasWidth = max(MediaQuery.of(context).size.width, (totalSec > 0 ? totalSec : 1.0) * _pixelsPerSecond);
 
                 return SizedBox(
-                  height: 180,
+                  height: _waveformHeight,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       return Listener(
@@ -976,7 +1227,12 @@ class _WaveformEditorState extends State<WaveformEditor> {
                               (event) {
                                 final scrollEvent = event as PointerScrollEvent;
                                 final mouseViewportX = scrollEvent.localPosition.dx;
-                                _handleWheelZoom(scrollEvent, mouseViewportX);
+                                _handleWheelZoom(
+                                  scrollEvent,
+                                  mouseViewportX,
+                                  totalDuration: totalSec,
+                                  viewportWidth: constraints.maxWidth,
+                                );
                               },
                             );
                           }
@@ -993,7 +1249,7 @@ class _WaveformEditorState extends State<WaveformEditor> {
                               builder: (context, pos, _) {
                                 final currentSec = pos.inMilliseconds / 1000.0;
                                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  if (context.mounted) {
+                                  if (context.mounted && audioService.isPlaying) {
                                     alignProvider.updateCurrentTime(currentSec);
                                   }
                                 });
@@ -1034,7 +1290,7 @@ class _WaveformEditorState extends State<WaveformEditor> {
                                             return Stack(
                                               children: [
                                                 CustomPaint(
-                                                  size: Size(canvasWidth, 180),
+                                                  size: Size(canvasWidth, _waveformHeight),
                                                   painter: WaveformPainter(
                                                     peaks: peaks,
                                                     totalDuration: totalSec,
@@ -1113,14 +1369,46 @@ class _WaveformEditorState extends State<WaveformEditor> {
             ),
           ),
 
+          // Divider
           const Divider(height: 1, color: AppColors.glassBorder),
 
-          // 3. Bottom Status Bar & Action Shortcuts
+          // 3. Bottom Status Bar: Scroll Buttons, Time, Info, Speed & Height Presets
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             child: Row(
               textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
               children: [
+                // Waveform Channel Horizontal Scroll Buttons
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.glassBorder),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_left_rounded, size: 20, color: Colors.white),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                        tooltip: 'تمرير قناة الموجات لليسار',
+                        onPressed: () => _scrollBy(-120),
+                      ),
+                      Container(width: 1, height: 14, color: AppColors.glassBorder),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_right_rounded, size: 20, color: Colors.white),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                        tooltip: 'تمرير قناة الموجات لليمين',
+                        onPressed: () => _scrollBy(120),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
                 // Current Time & Duration Badge
                 ValueListenableBuilder<Duration>(
                   valueListenable: audioService.positionNotifier,
@@ -1128,9 +1416,9 @@ class _WaveformEditorState extends State<WaveformEditor> {
                     final current = pos.inMilliseconds / 1000.0;
                     final total = audioService.totalSeconds;
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.3),
+                        color: Colors.black.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: AppColors.glassBorder),
                       ),
@@ -1147,7 +1435,7 @@ class _WaveformEditorState extends State<WaveformEditor> {
                   },
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
 
                 // Selected Granularity Item Quick Info
                 if (alignProvider.activeGranularity == AlignmentGranularity.ayah &&
@@ -1188,7 +1476,7 @@ class _WaveformEditorState extends State<WaveformEditor> {
                             margin: const EdgeInsets.only(left: 4),
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: isSel ? AppColors.primaryEmerald.withValues(alpha: 0.2) : Colors.transparent,
+                              color: isSel ? AppColors.primaryEmerald.withOpacity(0.2) : Colors.transparent,
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
                                 color: isSel ? AppColors.primaryEmerald : Colors.transparent,
@@ -1208,7 +1496,59 @@ class _WaveformEditorState extends State<WaveformEditor> {
                     );
                   },
                 ),
+
+                const SizedBox(width: 8),
+
+                // Height Presets Quick Toggle
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.03),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: AppColors.glassBorder),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildHeightPresetBtn(180, 'عادي'),
+                      _buildHeightPresetBtn(260, 'متوسط'),
+                      _buildHeightPresetBtn(360, 'عريض'),
+                    ],
+                  ),
+                ),
               ],
+            ),
+          ),
+
+          // Sleek Draggable Height Resize Handle (مقبض مط قسم موجات الصوت للأسفل بأسلوب نحيف وأنيق)
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onVerticalDragUpdate: (details) {
+              setState(() {
+                _waveformHeight = (_waveformHeight + details.delta.dy).clamp(_minWaveformHeight, _maxWaveformHeight);
+              });
+            },
+            child: MouseRegion(
+              cursor: SystemMouseCursors.resizeUpDown,
+              child: Container(
+                height: 8,
+                width: double.infinity,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                ),
+                child: Tooltip(
+                  message: 'اسحب للأسفل لتوسيع ارتفاع الموجات عموديًا',
+                  child: Container(
+                    width: 36,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -1291,6 +1631,33 @@ class _WaveformEditorState extends State<WaveformEditor> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeightPresetBtn(double h, String label) {
+    final isSelected = (_waveformHeight - h).abs() < 15;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _waveformHeight = h;
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryEmerald.withOpacity(0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? AppColors.primaryEmerald : AppColors.textMuted,
           ),
         ),
       ),

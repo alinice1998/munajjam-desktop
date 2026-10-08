@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/localization/app_locale.dart';
 import '../core/theme/app_theme.dart';
 import '../providers/alignment_provider.dart';
+import '../services/audio_service.dart';
 import 'widgets/ayah_list_view.dart';
 import 'widgets/config_modal.dart';
 import 'widgets/custom_title_bar.dart';
@@ -35,10 +37,39 @@ class _QAScreenState extends State<QAScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Directionality(
-        textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
-        child: Column(
-          children: [
+      body: Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+          final primaryFocus = FocusManager.instance.primaryFocus;
+          if (primaryFocus?.context?.widget is EditableText) {
+            return KeyEventResult.ignored;
+          }
+
+          if (event.logicalKey == LogicalKeyboardKey.space) {
+            AudioService().togglePlay();
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+            alignProvider.navigatePrevious();
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+            alignProvider.navigateNext();
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            alignProvider.stepBackward();
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            alignProvider.stepForward();
+            return KeyEventResult.handled;
+          }
+
+          return KeyEventResult.ignored;
+        },
+        child: Directionality(
+          textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
+          child: Column(
+            children: [
             // 0. Window Custom Title Bar
             CustomTitleBar(localeCode: widget.currentLocale),
 
@@ -103,6 +134,7 @@ class _QAScreenState extends State<QAScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

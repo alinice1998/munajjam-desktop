@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../models/alignment_models.dart';
 import '../models/surah_model.dart';
+import '../services/audio_service.dart';
 import '../services/quran_data_service.dart';
 
 class AlignmentProvider extends ChangeNotifier {
@@ -39,9 +40,112 @@ class AlignmentProvider extends ChangeNotifier {
   SurahInfo get currentSurah => getSurahById(_selectedSurahId);
 
   double get averageSimilarity {
-    if (_segments.isEmpty) return 0.98;
+    if (_segments.isEmpty) return 1.0;
     final total = _segments.fold<double>(0.0, (sum, item) => sum + item.similarity);
     return total / _segments.length;
+  }
+
+  /// جميع مواضع التكرار في السورة (كلمات أو أنفاس مكررة)
+  List<double> get repetitionTimestamps {
+    final list = <double>[];
+    for (final seg in _segments) {
+      for (final w in seg.words) {
+        if (w.isRepetition) list.add(w.start);
+      }
+    }
+    for (final bg in _breathGroups) {
+      if (bg.isRepetition) list.add(bg.startTime);
+    }
+    final sorted = list.toSet().toList()..sort();
+    return sorted;
+  }
+
+  /// تفاصيل جميع مواضع التكرار في السورة للعرض في النافذة التفاعلية
+  List<RepetitionDetail> get detailedRepetitions {
+    final list = <RepetitionDetail>[];
+    int idx = 1;
+    for (final seg in _segments) {
+      for (final w in seg.words) {
+        if (w.isRepetition) {
+          list.add(RepetitionDetail(
+            index: idx++,
+            timestamp: w.start,
+            endTime: w.end,
+            text: w.word,
+            ayahText: seg.text,
+            ayahNumber: seg.ayahNumber,
+            isWord: true,
+            repetitionType: w.repetitionType,
+          ));
+        }
+      }
+    }
+    for (final bg in _breathGroups) {
+      if (bg.isRepetition) {
+        int? ayahNum;
+        String aText = bg.text;
+        for (final seg in _segments) {
+          if (bg.startTime >= seg.start - 0.1 && bg.startTime <= seg.end + 0.1) {
+            ayahNum = seg.ayahNumber;
+            aText = seg.text;
+            break;
+          }
+        }
+        list.add(RepetitionDetail(
+          index: idx++,
+          timestamp: bg.startTime,
+          endTime: bg.endTime,
+          text: bg.text.isNotEmpty ? bg.text : 'سكتة #${bg.groupIndex}',
+          ayahText: aText,
+          ayahNumber: ayahNum,
+          isWord: false,
+          repetitionType: bg.repetitionType,
+        ));
+      }
+    }
+    list.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return list;
+  }
+
+  /// جميع مواضع المراجعة/الخطأ المحتملة (دقة منخفضة أقل من 95%)
+  List<double> get errorTimestamps {
+    final list = <double>[];
+    for (final seg in _segments) {
+      if (seg.similarity < 0.95) {
+        list.add(seg.start);
+      }
+      for (final w in seg.words) {
+        if (w.confidence < 0.90) {
+          list.add(w.start);
+        }
+      }
+    }
+    final sorted = list.toSet().toList()..sort();
+    return sorted;
+  }
+
+  double? getNextRepetition(double currentSec) {
+    final reps = repetitionTimestamps;
+    if (reps.isEmpty) return null;
+    return reps.firstWhere((t) => t > currentSec + 0.1, orElse: () => reps.first);
+  }
+
+  double? getPrevRepetition(double currentSec) {
+    final reps = repetitionTimestamps;
+    if (reps.isEmpty) return null;
+    return reps.lastWhere((t) => t < currentSec - 0.1, orElse: () => reps.last);
+  }
+
+  double? getNextError(double currentSec) {
+    final errors = errorTimestamps;
+    if (errors.isEmpty) return null;
+    return errors.firstWhere((t) => t > currentSec + 0.1, orElse: () => errors.first);
+  }
+
+  double? getPrevError(double currentSec) {
+    final errors = errorTimestamps;
+    if (errors.isEmpty) return null;
+    return errors.lastWhere((t) => t < currentSec - 0.1, orElse: () => errors.last);
   }
 
   void setSurahId(int id) {
@@ -122,17 +226,34 @@ class AlignmentProvider extends ChangeNotifier {
   void updateCurrentTime(double seconds) {
     int? newAyahIdx;
     for (int i = 0; i < _segments.length; i++) {
-      if (seconds >= _segments[i].start && seconds <= _segments[i].end + 0.05) {
+      final seg = _segments[i];
+      final nextStart = (i < _segments.length - 1) ? _segments[i + 1].start : double.infinity;
+      // An ayah is active if seconds is at/after its start, AND before the next ayah starts
+      if (seconds >= seg.start - 0.01 && seconds < nextStart) {
         newAyahIdx = i;
         break;
       }
     }
 
+    if (newAyahIdx == null && _segments.isNotEmpty) {
+      if (seconds >= _segments.last.start - 0.01) {
+        newAyahIdx = _segments.length - 1;
+      }
+    }
+
     int? newBreathIdx;
     for (int i = 0; i < _breathGroups.length; i++) {
-      if (seconds >= _breathGroups[i].startTime && seconds <= _breathGroups[i].endTime + 0.05) {
+      final bg = _breathGroups[i];
+      final nextStart = (i < _breathGroups.length - 1) ? _breathGroups[i + 1].startTime : double.infinity;
+      if (seconds >= bg.startTime - 0.01 && seconds < nextStart) {
         newBreathIdx = i;
         break;
+      }
+    }
+
+    if (newBreathIdx == null && _breathGroups.isNotEmpty) {
+      if (seconds >= _breathGroups.last.startTime - 0.01) {
+        newBreathIdx = _breathGroups.length - 1;
       }
     }
 
@@ -140,6 +261,166 @@ class AlignmentProvider extends ChangeNotifier {
       _currentSegmentIndex = newAyahIdx;
       _currentBreathIndex = newBreathIdx;
       notifyListeners();
+    }
+  }
+
+  void navigatePrevious() {
+    if (_activeGranularity == AlignmentGranularity.ayah) {
+      if (_segments.isEmpty) return;
+      final current = _currentSegmentIndex ?? 0;
+      if (current > 0) {
+        final target = current - 1;
+        selectAyah(target);
+        AudioService().seek(_segments[target].start);
+      }
+    } else if (_activeGranularity == AlignmentGranularity.breath) {
+      if (_breathGroups.isEmpty) return;
+      final current = _currentBreathIndex ?? 0;
+      if (current > 0) {
+        final target = current - 1;
+        selectBreath(target);
+        AudioService().seek(_breathGroups[target].startTime);
+      }
+    } else {
+      _stepWordNavigation(forward: false);
+    }
+  }
+
+  void navigateNext() {
+    if (_activeGranularity == AlignmentGranularity.ayah) {
+      if (_segments.isEmpty) return;
+      final current = _currentSegmentIndex ?? -1;
+      if (current < _segments.length - 1) {
+        final target = current + 1;
+        selectAyah(target);
+        AudioService().seek(_segments[target].start);
+      }
+    } else if (_activeGranularity == AlignmentGranularity.breath) {
+      if (_breathGroups.isEmpty) return;
+      final current = _currentBreathIndex ?? -1;
+      if (current < _breathGroups.length - 1) {
+        final target = current + 1;
+        selectBreath(target);
+        AudioService().seek(_breathGroups[target].startTime);
+      }
+    } else {
+      _stepWordNavigation(forward: true);
+    }
+  }
+
+  void _stepWordNavigation({required bool forward}) {
+    final curSec = AudioService().currentSeconds;
+    final allWords = <({int ayahIdx, WordSegment word})>[];
+    for (int a = 0; a < _segments.length; a++) {
+      for (final w in _segments[a].words) {
+        allWords.add((ayahIdx: a, word: w));
+      }
+    }
+    if (allWords.isEmpty) return;
+
+    if (forward) {
+      for (final item in allWords) {
+        if (item.word.start > curSec + 0.05) {
+          selectAyah(item.ayahIdx);
+          AudioService().seek(item.word.start);
+          return;
+        }
+      }
+    } else {
+      for (int i = allWords.length - 1; i >= 0; i--) {
+        final item = allWords[i];
+        if (item.word.start < curSec - 0.1) {
+          selectAyah(item.ayahIdx);
+          AudioService().seek(item.word.start);
+          return;
+        }
+      }
+    }
+  }
+
+  void stepBackward() {
+    final curSec = AudioService().currentSeconds;
+    if (_activeGranularity == AlignmentGranularity.ayah) {
+      if (_segments.isEmpty) return;
+      int targetIdx = 0;
+      for (int i = _segments.length - 1; i >= 0; i--) {
+        if (_segments[i].start < curSec - 0.2) {
+          targetIdx = i;
+          break;
+        }
+      }
+      selectAyah(targetIdx);
+      AudioService().seek(_segments[targetIdx].start);
+    } else if (_activeGranularity == AlignmentGranularity.breath) {
+      if (_breathGroups.isEmpty) return;
+      int targetIdx = 0;
+      for (int i = _breathGroups.length - 1; i >= 0; i--) {
+        if (_breathGroups[i].startTime < curSec - 0.2) {
+          targetIdx = i;
+          break;
+        }
+      }
+      selectBreath(targetIdx);
+      AudioService().seek(_breathGroups[targetIdx].startTime);
+    } else {
+      double? prevWordStart;
+      int? foundAyahIdx;
+      for (int a = 0; a < _segments.length; a++) {
+        for (final w in _segments[a].words) {
+          if (w.start < curSec - 0.15) {
+            prevWordStart = w.start;
+            foundAyahIdx = a;
+          }
+        }
+      }
+      if (prevWordStart != null) {
+        if (foundAyahIdx != null) selectAyah(foundAyahIdx);
+        AudioService().seek(prevWordStart);
+      }
+    }
+  }
+
+  void stepForward() {
+    final curSec = AudioService().currentSeconds;
+    if (_activeGranularity == AlignmentGranularity.ayah) {
+      if (_segments.isEmpty) return;
+      int targetIdx = _segments.length - 1;
+      for (int i = 0; i < _segments.length; i++) {
+        if (_segments[i].start > curSec + 0.1) {
+          targetIdx = i;
+          break;
+        }
+      }
+      selectAyah(targetIdx);
+      AudioService().seek(_segments[targetIdx].start);
+    } else if (_activeGranularity == AlignmentGranularity.breath) {
+      if (_breathGroups.isEmpty) return;
+      int targetIdx = _breathGroups.length - 1;
+      for (int i = 0; i < _breathGroups.length; i++) {
+        if (_breathGroups[i].startTime > curSec + 0.1) {
+          targetIdx = i;
+          break;
+        }
+      }
+      selectBreath(targetIdx);
+      AudioService().seek(_breathGroups[targetIdx].startTime);
+    } else {
+      double? nextWordStart;
+      int? foundAyahIdx;
+      for (int a = 0; a < _segments.length; a++) {
+        for (final w in _segments[a].words) {
+          if (w.start > curSec + 0.1) {
+            nextWordStart = w.start;
+            foundAyahIdx = a;
+            break;
+          }
+        }
+        if (nextWordStart != null) break;
+      }
+      if (nextWordStart != null) {
+        if (foundAyahIdx != null) selectAyah(foundAyahIdx);
+        AudioService().seek(nextWordStart);
+      }
     }
   }
 
@@ -218,37 +499,102 @@ class AlignmentProvider extends ChangeNotifier {
     return true;
   }
 
-  void updateAyahSegment(int index, {double? start, double? end}) {
+  void updateAyahSegment(int index, {double? start, double? end, bool syncLinked = true}) {
     if (index < 0 || index >= _segments.length) return;
     final current = _segments[index];
+    final oldStart = current.start;
+    final oldEnd = current.end;
     final updatedStart = start != null ? double.parse(start.toStringAsFixed(3)) : current.start;
     final updatedEnd = end != null ? double.parse(end.toStringAsFixed(3)) : current.end;
 
     if (updatedEnd <= updatedStart) return;
 
-    _segments[index] = current.copyWith(start: updatedStart, end: updatedEnd);
+    List<WordSegment> updatedWords = List<WordSegment>.from(current.words);
+    if (syncLinked && updatedWords.isNotEmpty) {
+      if (start != null) {
+        updatedWords[0] = updatedWords[0].copyWith(start: updatedStart);
+      }
+      if (end != null) {
+        updatedWords[updatedWords.length - 1] = updatedWords.last.copyWith(end: updatedEnd);
+      }
+    }
+
+    _segments[index] = current.copyWith(
+      start: updatedStart,
+      end: updatedEnd,
+      words: updatedWords,
+    );
+
+    // Sync corresponding breath groups
+    if (syncLinked) {
+      for (int i = 0; i < _breathGroups.length; i++) {
+        final bg = _breathGroups[i];
+        if (start != null && (bg.startTime - oldStart).abs() < 0.15) {
+          bg.startTime = updatedStart;
+          bg.duration = bg.endTime - bg.startTime;
+          if (bg.words.isNotEmpty) {
+            bg.words[0] = bg.words[0].copyWith(start: updatedStart);
+          }
+        }
+        if (end != null && (bg.endTime - oldEnd).abs() < 0.15) {
+          bg.endTime = updatedEnd;
+          bg.duration = bg.endTime - bg.startTime;
+          if (bg.words.isNotEmpty) {
+            bg.words[bg.words.length - 1] = bg.words.last.copyWith(end: updatedEnd);
+          }
+        }
+      }
+    }
+
     _triggerSaveIndicator();
     notifyListeners();
   }
 
-  void updateBreathGroup(int index, {double? start, double? end}) {
+  void updateBreathGroup(int index, {double? start, double? end, bool syncLinked = true}) {
     if (index < 0 || index >= _breathGroups.length) return;
     final current = _breathGroups[index];
+    final oldStart = current.startTime;
+    final oldEnd = current.endTime;
     final updatedStart = start != null ? double.parse(start.toStringAsFixed(3)) : current.startTime;
     final updatedEnd = end != null ? double.parse(end.toStringAsFixed(3)) : current.endTime;
 
     if (updatedEnd <= updatedStart) return;
 
+    List<WordSegment> updatedWords = List<WordSegment>.from(current.words);
+    if (syncLinked && updatedWords.isNotEmpty) {
+      if (start != null) {
+        updatedWords[0] = updatedWords[0].copyWith(start: updatedStart);
+      }
+      if (end != null) {
+        updatedWords[updatedWords.length - 1] = updatedWords.last.copyWith(end: updatedEnd);
+      }
+    }
+
     _breathGroups[index] = current.copyWith(
       startTime: updatedStart,
       endTime: updatedEnd,
       duration: updatedEnd - updatedStart,
+      words: updatedWords,
     );
+
+    // Sync corresponding ayah boundaries
+    if (syncLinked) {
+      for (int i = 0; i < _segments.length; i++) {
+        final seg = _segments[i];
+        if (start != null && (seg.start - oldStart).abs() < 0.15) {
+          updateAyahSegment(i, start: updatedStart, syncLinked: false);
+        }
+        if (end != null && (seg.end - oldEnd).abs() < 0.15) {
+          updateAyahSegment(i, end: updatedEnd, syncLinked: false);
+        }
+      }
+    }
+
     _triggerSaveIndicator();
     notifyListeners();
   }
 
-  void updateWordSegment(int ayahIndex, int wordIndex, {double? start, double? end}) {
+  void updateWordSegment(int ayahIndex, int wordIndex, {double? start, double? end, bool syncLinked = true}) {
     if (ayahIndex < 0 || ayahIndex >= _segments.length) return;
     final ayah = _segments[ayahIndex];
     if (wordIndex < 0 || wordIndex >= ayah.words.length) return;
@@ -261,7 +607,45 @@ class AlignmentProvider extends ChangeNotifier {
 
     final updatedWords = List<WordSegment>.from(ayah.words);
     updatedWords[wordIndex] = word.copyWith(start: updatedStart, end: updatedEnd);
-    _segments[ayahIndex] = ayah.copyWith(words: updatedWords);
+
+    double newAyahStart = ayah.start;
+    double newAyahEnd = ayah.end;
+
+    if (syncLinked) {
+      if (wordIndex == 0 && start != null) {
+        newAyahStart = updatedStart;
+      }
+      if (wordIndex == ayah.words.length - 1 && end != null) {
+        newAyahEnd = updatedEnd;
+      }
+    }
+
+    _segments[ayahIndex] = ayah.copyWith(
+      start: newAyahStart,
+      end: newAyahEnd,
+      words: updatedWords,
+    );
+
+    // Sync matching word inside breathGroups
+    if (syncLinked) {
+      for (final bg in _breathGroups) {
+        for (int w = 0; w < bg.words.length; w++) {
+          final bw = bg.words[w];
+          if (bw.word == word.word && (bw.start - word.start).abs() < 0.05) {
+            bg.words[w] = bw.copyWith(start: updatedStart, end: updatedEnd);
+            if (w == 0 && start != null) {
+              bg.startTime = updatedStart;
+              bg.duration = bg.endTime - bg.startTime;
+            }
+            if (w == bg.words.length - 1 && end != null) {
+              bg.endTime = updatedEnd;
+              bg.duration = bg.endTime - bg.startTime;
+            }
+          }
+        }
+      }
+    }
+
     _triggerSaveIndicator();
     notifyListeners();
   }

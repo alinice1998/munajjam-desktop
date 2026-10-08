@@ -162,9 +162,12 @@ class AyahSegment {
     required this.start,
     required this.end,
     required this.text,
-    this.similarity = 0.98,
+    double? similarity,
     this.words = const [],
-  });
+  }) : similarity = similarity ??
+            (words.isNotEmpty
+                ? (words.map((w) => w.confidence).reduce((a, b) => a + b) / words.length)
+                : 1.0);
 
   double get duration => end - start;
 
@@ -179,13 +182,20 @@ class AyahSegment {
 
   factory AyahSegment.fromJson(Map<String, dynamic> json) {
     var rawWords = json['words'] as List? ?? [];
+    final parsedWords = rawWords.map((w) => WordSegment.fromJson(w)).toList();
+    final rawSim = (json['similarity'] as num?)?.toDouble() ?? (json['confidence'] as num?)?.toDouble();
+    final computedSim = rawSim ??
+        (parsedWords.isNotEmpty
+            ? (parsedWords.map((w) => w.confidence).reduce((a, b) => a + b) / parsedWords.length)
+            : 1.0);
+
     return AyahSegment(
       ayahNumber: json['ayah_number'] ?? 1,
       start: (json['start'] as num?)?.toDouble() ?? (json['start_time'] as num?)?.toDouble() ?? 0.0,
       end: (json['end'] as num?)?.toDouble() ?? (json['end_time'] as num?)?.toDouble() ?? 0.0,
       text: json['text'] ?? '',
-      similarity: (json['similarity'] as num?)?.toDouble() ?? 0.98,
-      words: rawWords.map((w) => WordSegment.fromJson(w)).toList(),
+      similarity: computedSim,
+      words: parsedWords,
     );
   }
 
@@ -206,4 +216,28 @@ class AyahSegment {
       words: words ?? this.words.map((w) => w.copyWith()).toList(),
     );
   }
+}
+
+class RepetitionDetail {
+  final int index;
+  final double timestamp;
+  final double endTime;
+  final String text;
+  final String ayahText;
+  final int? ayahNumber;
+  final bool isWord;
+  final String? repetitionType;
+
+  RepetitionDetail({
+    required this.index,
+    required this.timestamp,
+    required this.endTime,
+    required this.text,
+    required this.ayahText,
+    this.ayahNumber,
+    this.isWord = true,
+    this.repetitionType,
+  });
+
+  double get duration => (endTime - timestamp).clamp(0.0, double.infinity);
 }

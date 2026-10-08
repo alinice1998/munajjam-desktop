@@ -114,11 +114,15 @@ class QuranDataService {
         for (final aNum in sortedAyahKeys) {
           final wList = ayahWordsMap[aNum]!;
           wList.sort((a, b) => a.start.compareTo(b.start));
+          final avgConf = wList.isNotEmpty
+              ? wList.map((w) => w.confidence).reduce((a, b) => a + b) / wList.length
+              : 1.0;
           ayahs.add(AyahSegment(
             ayahNumber: aNum,
             start: wList.first.start,
             end: wList.last.end,
             text: wList.map((w) => w.word).join(' '),
+            similarity: avgConf,
             words: wList,
           ));
         }

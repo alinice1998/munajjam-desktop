@@ -43,7 +43,16 @@ class KaraokePlayer extends StatelessWidget {
           // 1. Precise Ayah Segment Matching Algorithm (identical to QAPlayer.tsx)
           AyahSegment? currentSegment;
 
-          if (segments.isNotEmpty) {
+          final selectedAyahIdx = alignProvider.currentSegmentIndex;
+          if (selectedAyahIdx != null && selectedAyahIdx >= 0 && selectedAyahIdx < segments.length) {
+            final selSeg = segments[selectedAyahIdx];
+            final nextStart = selectedAyahIdx < segments.length - 1 ? segments[selectedAyahIdx + 1].start : double.infinity;
+            if (!audioService.isPlaying || audioService.isSeeking || (currentTime >= selSeg.start - 0.05 && currentTime < nextStart)) {
+              currentSegment = selSeg;
+            }
+          }
+
+          if (currentSegment == null && segments.isNotEmpty) {
             const boundaryBuffer = 0.08;
             for (int i = 0; i < segments.length; i++) {
               final segment = segments[i];
@@ -78,7 +87,16 @@ class KaraokePlayer extends StatelessWidget {
 
           // 2. Active Breath Group Matching Algorithm
           BreathGroup? currentBreathGroup;
-          if (breathGroups.isNotEmpty) {
+          final selectedBreathIdx = alignProvider.currentBreathIndex;
+          if (selectedBreathIdx != null && selectedBreathIdx >= 0 && selectedBreathIdx < breathGroups.length) {
+            final selBg = breathGroups[selectedBreathIdx];
+            final nextStart = selectedBreathIdx < breathGroups.length - 1 ? breathGroups[selectedBreathIdx + 1].startTime : double.infinity;
+            if (!audioService.isPlaying || audioService.isSeeking || (currentTime >= selBg.startTime - 0.05 && currentTime < nextStart)) {
+              currentBreathGroup = selBg;
+            }
+          }
+
+          if (currentBreathGroup == null && breathGroups.isNotEmpty) {
             for (int i = 0; i < breathGroups.length; i++) {
               final bg = breathGroups[i];
               if (currentTime >= bg.startTime && currentTime <= bg.endTime + 0.05) {
@@ -97,14 +115,17 @@ class KaraokePlayer extends StatelessWidget {
           // 3. Active Word Index Matching Algorithm (Non-jumping ultra-smooth karaoke)
           int activeWordIndex = -1;
           if (currentSegment != null && currentSegment.words.isNotEmpty) {
-            final words = currentSegment.words;
-            for (int i = 0; i < words.length; i++) {
-              final w = words[i];
-              final nextStart = i < words.length - 1 ? words[i + 1].start : w.end;
-              final upperBound = max(w.end, nextStart);
-              if (currentTime >= w.start && currentTime < upperBound) {
-                activeWordIndex = i;
-                break;
+            // التحقق الدقيق من أن موضع الصوت يقع فعلياً داخل الآية المعروضة
+            if (currentTime >= currentSegment.start - 0.02 && currentTime <= currentSegment.end + 0.05) {
+              final words = currentSegment.words;
+              for (int i = 0; i < words.length; i++) {
+                final w = words[i];
+                final nextStart = i < words.length - 1 ? words[i + 1].start : w.end;
+                final upperBound = max(w.end, nextStart);
+                if (currentTime >= w.start && currentTime < upperBound) {
+                  activeWordIndex = i;
+                  break;
+                }
               }
             }
           }
