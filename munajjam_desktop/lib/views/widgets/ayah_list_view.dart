@@ -781,6 +781,28 @@ class _AyahListViewState extends State<AyahListView> {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: breath.similarity >= 0.95
+                              ? AppColors.scoreHigh.withValues(alpha: 0.15)
+                              : (breath.similarity >= 0.85
+                                  ? AppColors.scoreMed.withValues(alpha: 0.15)
+                                  : AppColors.dangerRed.withValues(alpha: 0.15)),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${(breath.similarity * 100).toStringAsFixed(0)}% دقة',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: breath.similarity >= 0.95
+                                ? AppColors.scoreHigh
+                                : (breath.similarity >= 0.85 ? AppColors.scoreMed : AppColors.dangerRed),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Text(
                         '${breath.startTime.toStringAsFixed(2)}s - ${breath.endTime.toStringAsFixed(2)}s (${breath.duration.toStringAsFixed(2)}s)',
                         style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textMuted),
@@ -1235,6 +1257,28 @@ class _AyahListViewState extends State<AyahListView> {
                       ),
                     ),
                     const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: breath.similarity >= 0.95
+                            ? AppColors.scoreHigh.withValues(alpha: 0.15)
+                            : (breath.similarity >= 0.85
+                                ? AppColors.scoreMed.withValues(alpha: 0.15)
+                                : AppColors.dangerRed.withValues(alpha: 0.15)),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '${(breath.similarity * 100).toStringAsFixed(0)}% دقة',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: breath.similarity >= 0.95
+                              ? AppColors.scoreHigh
+                              : (breath.similarity >= 0.85 ? AppColors.scoreMed : AppColors.dangerRed),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Text(
                       '${breath.startTime.toStringAsFixed(2)}s - ${breath.endTime.toStringAsFixed(2)}s (${breath.duration.toStringAsFixed(2)}s)',
                       style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textMuted),
@@ -1332,16 +1376,20 @@ class _AyahListViewState extends State<AyahListView> {
     );
   }
 
-  Widget _buildWordBadge(WordSegment w, AudioService audioService, {bool large = false}) {
+  Widget _buildWordBadge(WordSegment w, AudioService audioService, {double? threshold, bool large = false}) {
+    final wordThreshold = threshold ?? 0.90;
+    final isLowConfidence = w.confidence < wordThreshold;
     return InkWell(
       onTap: () => audioService.playSnippet(w.start, w.end),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: large ? 12 : 8, vertical: large ? 8 : 5),
         decoration: BoxDecoration(
-          color: AppColors.surfaceDark,
+          color: isLowConfidence ? AppColors.scoreLow.withValues(alpha: 0.12) : AppColors.surfaceDark,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.glassBorder),
+          border: Border.all(
+            color: isLowConfidence ? AppColors.scoreLow.withValues(alpha: 0.5) : AppColors.glassBorder,
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1349,26 +1397,46 @@ class _AyahListViewState extends State<AyahListView> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.play_circle_outline, size: 12, color: AppColors.primaryEmerald),
+                Icon(
+                  Icons.play_circle_outline,
+                  size: 12,
+                  color: isLowConfidence ? AppColors.scoreLow : AppColors.primaryEmerald,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   w.word,
                   style: GoogleFonts.amiri(
                     fontSize: large ? 16 : 14,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: isLowConfidence ? AppColors.scoreLow : Colors.white,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 2),
-            Text(
-              '${w.start.toStringAsFixed(2)}s - ${w.end.toStringAsFixed(2)}s',
-              style: TextStyle(
-                fontSize: large ? 10 : 9,
-                fontFamily: 'monospace',
-                color: AppColors.textMuted,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${w.start.toStringAsFixed(2)}s - ${w.end.toStringAsFixed(2)}s',
+                  style: TextStyle(
+                    fontSize: large ? 10 : 9,
+                    fontFamily: 'monospace',
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                if (w.confidence < wordThreshold) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    '(${(w.confidence * 100).toStringAsFixed(0)}%)',
+                    style: TextStyle(
+                      fontSize: large ? 9.5 : 8.5,
+                      fontWeight: FontWeight.bold,
+                      color: isLowConfidence ? AppColors.scoreLow : AppColors.scoreMed,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ),

@@ -76,6 +76,7 @@ class BreathGroup {
   String text;
   List<WordSegment> words;
   List<int> ayahNumbers;
+  double similarity;
   bool isRepetition;
   String? repetitionType;
   String? overlapText;
@@ -88,10 +89,14 @@ class BreathGroup {
     required this.text,
     required this.words,
     required this.ayahNumbers,
+    double? similarity,
     this.isRepetition = false,
     this.repetitionType,
     this.overlapText,
-  });
+  }) : similarity = similarity ??
+            (words.isNotEmpty
+                ? (words.map((w) => w.confidence).reduce((a, b) => a + b) / words.length)
+                : 1.0);
 
   Map<String, dynamic> toJson() => {
         'group_index': groupIndex,
@@ -99,6 +104,7 @@ class BreathGroup {
         'end_time': double.parse(endTime.toStringAsFixed(3)),
         'duration': double.parse(duration.toStringAsFixed(3)),
         'text': text,
+        'similarity': similarity,
         'words': words.map((w) => w.toJson()).toList(),
         'ayah_numbers': ayahNumbers,
         if (isRepetition) 'is_repetition': true,
@@ -108,14 +114,22 @@ class BreathGroup {
 
   factory BreathGroup.fromJson(Map<String, dynamic> json) {
     var rawWords = json['words'] as List? ?? [];
+    final parsedWords = rawWords.map((w) => WordSegment.fromJson(w as Map<String, dynamic>)).toList();
+    final rawSim = (json['similarity'] as num?)?.toDouble() ?? (json['confidence'] as num?)?.toDouble();
+    final computedSim = rawSim ??
+        (parsedWords.isNotEmpty
+            ? (parsedWords.map((w) => w.confidence).reduce((a, b) => a + b) / parsedWords.length)
+            : 1.0);
+
     return BreathGroup(
       groupIndex: json['group_index'] ?? 1,
       startTime: (json['start_time'] as num?)?.toDouble() ?? 0.0,
       endTime: (json['end_time'] as num?)?.toDouble() ?? 0.0,
       duration: (json['duration'] as num?)?.toDouble() ?? 0.0,
       text: json['text'] ?? '',
-      words: rawWords.map((w) => WordSegment.fromJson(w as Map<String, dynamic>)).toList(),
+      words: parsedWords,
       ayahNumbers: (json['ayah_numbers'] as List?)?.map((e) => e as int).toList() ?? [],
+      similarity: computedSim,
       isRepetition: json['is_repetition'] == true,
       repetitionType: json['repetition_type'] as String?,
       overlapText: json['overlap_text'] as String?,
@@ -130,6 +144,7 @@ class BreathGroup {
     String? text,
     List<WordSegment>? words,
     List<int>? ayahNumbers,
+    double? similarity,
     bool? isRepetition,
     String? repetitionType,
     String? overlapText,
@@ -142,6 +157,7 @@ class BreathGroup {
       text: text ?? this.text,
       words: words ?? this.words.map((w) => w.copyWith()).toList(),
       ayahNumbers: ayahNumbers ?? List.from(this.ayahNumbers),
+      similarity: similarity ?? this.similarity,
       isRepetition: isRepetition ?? this.isRepetition,
       repetitionType: repetitionType ?? this.repetitionType,
       overlapText: overlapText ?? this.overlapText,
@@ -237,6 +253,32 @@ class RepetitionDetail {
     this.ayahNumber,
     this.isWord = true,
     this.repetitionType,
+  });
+
+  double get duration => (endTime - timestamp).clamp(0.0, double.infinity);
+}
+
+class ReviewItemDetail {
+  final int index;
+  final double timestamp;
+  final double endTime;
+  final String text;
+  final String ayahText;
+  final int? ayahNumber;
+  final int? breathIndex;
+  final double score;
+  final AlignmentGranularity granularity;
+
+  ReviewItemDetail({
+    required this.index,
+    required this.timestamp,
+    required this.endTime,
+    required this.text,
+    required this.ayahText,
+    this.ayahNumber,
+    this.breathIndex,
+    required this.score,
+    required this.granularity,
   });
 
   double get duration => (endTime - timestamp).clamp(0.0, double.infinity);

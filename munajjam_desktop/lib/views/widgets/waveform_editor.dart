@@ -11,6 +11,7 @@ import '../../services/audio_service.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'waveform_painter.dart';
 import 'repetitions_modal.dart';
+import 'review_modal.dart';
 
 enum MarkerActionMode {
   moveNearest,
@@ -185,6 +186,20 @@ class _WaveformEditorState extends State<WaveformEditor> {
     );
   }
 
+  void _openReviewModal(BuildContext context, AlignmentProvider alignProvider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => ReviewModal(
+        localeCode: widget.localeCode,
+        onNavigate: (timestamp) {
+          AudioService().seek(timestamp);
+          _ensureTimeVisible(timestamp);
+          alignProvider.updateCurrentTime(timestamp);
+        },
+      ),
+    );
+  }
+
   void _handleStepBackward(AlignmentProvider alignProvider) {
     alignProvider.stepBackward();
     _ensureTimeVisible(AudioService().currentSeconds);
@@ -216,6 +231,7 @@ class _WaveformEditorState extends State<WaveformEditor> {
     if (next != null) {
       AudioService().seek(next);
       _ensureTimeVisible(next);
+      alignProvider.updateCurrentTime(next);
     }
   }
 
@@ -224,6 +240,7 @@ class _WaveformEditorState extends State<WaveformEditor> {
     if (prev != null) {
       AudioService().seek(prev);
       _ensureTimeVisible(prev);
+      alignProvider.updateCurrentTime(prev);
     }
   }
 
@@ -937,24 +954,24 @@ class _WaveformEditorState extends State<WaveformEditor> {
 
                 const SizedBox(width: 8),
 
-                // Helper Pill: Shift Drag linking hint
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppColors.glassBorder),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.link_rounded, size: 13, color: AppColors.primaryEmerald),
-                      const SizedBox(width: 4),
-                      Text(
-                        isRTL ? 'سحب = تعديل متزامن | Shift + سحب = تعديل منفرد' : 'Drag = Linked Move | Shift + Drag = Single Move',
-                        style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondary),
-                      ),
-                    ],
+                // Helper Pill: Shift Drag linking hint as compact icon with tooltip
+                Tooltip(
+                  message: isRTL ? 'سحب = تعديل متزامن | Shift + سحب = تعديل منفرد' : 'Drag = Linked Move | Shift + Drag = Single Move',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.glassBorder),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.link_rounded, size: 14, color: AppColors.primaryEmerald),
+                        SizedBox(width: 2),
+                        Icon(Icons.info_outline_rounded, size: 11, color: AppColors.textMuted),
+                      ],
+                    ),
                   ),
                 ),
                 ValueListenableBuilder<bool>(
@@ -1038,41 +1055,78 @@ class _WaveformEditorState extends State<WaveformEditor> {
                   ),
                 ],
 
-                // Error / Low Confidence Navigation Capsule
-                if (alignProvider.errorTimestamps.isNotEmpty) ...[
+                // Review / Low Confidence Navigation Capsule (Always visible when segments are loaded)
+                if (alignProvider.segments.isNotEmpty) ...[
                   const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.scoreLow.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.scoreLow.withOpacity(0.35)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
-                          icon: const Icon(Icons.chevron_left_rounded, size: 16, color: AppColors.scoreLow),
-                          tooltip: 'الموضع السابق ذو الدقة المنخفضة',
-                          onPressed: () => _jumpToPrevError(alignProvider),
+                  Builder(
+                    builder: (context) {
+                      final errorCount = alignProvider.errorTimestamps.length;
+                      final hasErrors = errorCount > 0;
+                      final Color themeColor = hasErrors ? AppColors.scoreLow : AppColors.textSecondary;
+                      final String reviewText = switch (alignProvider.activeGranularity) {
+                        AlignmentGranularity.ayah => 'مراجعة آيات ($errorCount)',
+                        AlignmentGranularity.breath => 'مراجعة أنفاس ($errorCount)',
+                        AlignmentGranularity.word => 'مراجعة كلمات ($errorCount)',
+                      };
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: hasErrors ? AppColors.scoreLow.withOpacity(0.12) : Colors.white.withOpacity(0.04),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: hasErrors ? AppColors.scoreLow.withOpacity(0.35) : AppColors.glassBorder,
+                          ),
                         ),
-                        const Icon(Icons.priority_high_rounded, size: 13, color: AppColors.scoreLow),
-                        const SizedBox(width: 3),
-                        Text(
-                          'مراجعة (${alignProvider.errorTimestamps.length})',
-                          style: const TextStyle(fontSize: 10.5, color: AppColors.scoreLow, fontWeight: FontWeight.bold),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (hasErrors)
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+                                icon: Icon(Icons.chevron_left_rounded, size: 16, color: themeColor),
+                                tooltip: 'الموضع السابق ذو الدقة المنخفضة',
+                                onPressed: () => _jumpToPrevError(alignProvider),
+                              ),
+                            InkWell(
+                              onTap: () => _openReviewModal(context, alignProvider),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.fact_check_rounded,
+                                      size: 13,
+                                      color: themeColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      reviewText,
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        color: themeColor,
+                                        fontWeight: hasErrors ? FontWeight.bold : FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (hasErrors)
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+                                icon: Icon(Icons.chevron_right_rounded, size: 16, color: themeColor),
+                                tooltip: 'الموضع التالي ذو الدقة المنخفضة',
+                                onPressed: () => _jumpToNextError(alignProvider),
+                              ),
+                          ],
                         ),
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
-                          icon: const Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.scoreLow),
-                          tooltip: 'الموضع التالي ذو الدقة المنخفضة',
-                          onPressed: () => _jumpToNextError(alignProvider),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ],
 
@@ -1310,6 +1364,9 @@ class _WaveformEditorState extends State<WaveformEditor> {
                                                     dragTimeSec: _dragCurrentTime,
                                                     visibleStartX: offset,
                                                     visibleWidth: viewWidth,
+                                                    ayahThreshold: alignProvider.ayahReviewThreshold,
+                                                    breathThreshold: alignProvider.breathReviewThreshold,
+                                                    wordThreshold: alignProvider.wordReviewThreshold,
                                                   ),
                                                 ),
                                                 ValueListenableBuilder<bool>(

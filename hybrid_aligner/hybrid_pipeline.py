@@ -933,11 +933,16 @@ class HybridQuranAligner:
                         refined_alignments[global_idx] = dict(g_words_aligned[src_idx])
 
             bg_ayah_nums = sorted(list(set(w.get("ayah_number") for w in g_words_aligned if w.get("ayah_number") is not None)))
+            bg_conf_list = [w.get("confidence", 1.0) for w in g_words_aligned]
+            bg_sim = round(float(np.mean(bg_conf_list)), 3) if bg_conf_list else 1.0
+
             final_breath_groups.append({
                 "group_index": g_idx + 1,
                 "start_time": round(float(g_actual_start), 3),
                 "end_time": round(float(g_actual_end), 3),
                 "duration": round(float(g_actual_end - g_actual_start), 3),
+                "similarity": bg_sim,
+                "confidence": bg_sim,
                 "text": " ".join([w["word"] for w in g_words_aligned]),
                 "words": g_words_aligned,
                 "word_indices": g_indices,
@@ -969,15 +974,20 @@ class HybridQuranAligner:
             if a_words_aligned:
                 a_start = a_words_aligned[0]["start"]
                 a_end = a_words_aligned[-1]["end"]
+                a_conf_list = [w.get("confidence", 1.0) for w in a_words_aligned]
+                a_sim = round(float(np.mean(a_conf_list)), 3) if a_conf_list else 1.0
             else:
                 a_start = a_info.get("start_time", 0.0)
                 a_end = a_info.get("end_time", total_dur)
+                a_sim = 1.0
 
             ayahs_data.append({
                 "ayah_number": a_num,
                 "start_time": a_start,
                 "end_time": a_end,
                 "text": a_info["text"],
+                "similarity": a_sim,
+                "confidence": a_sim,
                 "words": a_words_aligned
             })
 

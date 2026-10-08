@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/alignment_models.dart';
 import '../models/surah_model.dart';
 import '../services/audio_service.dart';
@@ -10,6 +11,80 @@ class AlignmentProvider extends ChangeNotifier {
   String _reciterName = '';
   String _riwaya = 'hafsh';
   AlignmentGranularity _activeGranularity = AlignmentGranularity.ayah;
+
+  double _ayahReviewThreshold = 0.95;
+  double _breathReviewThreshold = 0.95;
+  double _wordReviewThreshold = 0.90;
+
+  AlignmentProvider() {
+    _loadReviewThresholds();
+  }
+
+  Future<void> _loadReviewThresholds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _ayahReviewThreshold = prefs.getDouble('ayah_review_threshold') ?? 0.95;
+      _breathReviewThreshold = prefs.getDouble('breath_review_threshold') ?? 0.95;
+      _wordReviewThreshold = prefs.getDouble('word_review_threshold') ?? 0.90;
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> _saveReviewThresholds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('ayah_review_threshold', _ayahReviewThreshold);
+      await prefs.setDouble('breath_review_threshold', _breathReviewThreshold);
+      await prefs.setDouble('word_review_threshold', _wordReviewThreshold);
+    } catch (_) {}
+  }
+
+  double get ayahReviewThreshold => _ayahReviewThreshold;
+  double get breathReviewThreshold => _breathReviewThreshold;
+  double get wordReviewThreshold => _wordReviewThreshold;
+
+  double getThresholdForGranularity(AlignmentGranularity granularity) {
+    switch (granularity) {
+      case AlignmentGranularity.ayah:
+        return _ayahReviewThreshold;
+      case AlignmentGranularity.breath:
+        return _breathReviewThreshold;
+      case AlignmentGranularity.word:
+        return _wordReviewThreshold;
+    }
+  }
+
+  void setAyahReviewThreshold(double val) {
+    _ayahReviewThreshold = val.clamp(0.50, 1.0);
+    _saveReviewThresholds();
+    notifyListeners();
+  }
+
+  void setBreathReviewThreshold(double val) {
+    _breathReviewThreshold = val.clamp(0.50, 1.0);
+    _saveReviewThresholds();
+    notifyListeners();
+  }
+
+  void setWordReviewThreshold(double val) {
+    _wordReviewThreshold = val.clamp(0.50, 1.0);
+    _saveReviewThresholds();
+    notifyListeners();
+  }
+
+  void setThresholdForGranularity(AlignmentGranularity granularity, double val) {
+    switch (granularity) {
+      case AlignmentGranularity.ayah:
+        setAyahReviewThreshold(val);
+        break;
+      case AlignmentGranularity.breath:
+        setBreathReviewThreshold(val);
+        break;
+      case AlignmentGranularity.word:
+        setWordReviewThreshold(val);
+        break;
+    }
+  }
 
   List<AyahSegment> _segments = [];
   List<BreathGroup> _breathGroups = [];
@@ -107,22 +182,115 @@ class AlignmentProvider extends ChangeNotifier {
     return list;
   }
 
-  /// جميع مواضع المراجعة/الخطأ المحتملة (دقة منخفضة أقل من 95%)
+  /// جميع مواضع المراجعة/الخطأ المحتملة (دقة منخفضة) بحسب المستوى النشط (آيات أو أنفاس أو كلمات)
   List<double> get errorTimestamps {
-    final list = <double>[];
+    switch (_activeGranularity) {
+      case AlignmentGranularity.ayah:
+        return _segments
+            .where((seg) => seg.similarity < _ayahReviewThreshold)
+            .map((seg) => seg.start)
+            .toList()..sort();
+      case AlignmentGranularity.breath:
+        return _breathGroups
+            .where((bg) => bg.similarity < _breathReviewThreshold)
+            .map((bg) => bg.startTime)
+            .toList()..sort();
+      case AlignmentGranularity.word:
+        final list = <double>[];
+        for (final seg in _segments) {
+          for (final w in seg.words) {
+            if (w.confidence < _wordReviewThreshold) {
+              list.add(w.start);
+            }
+          }
+        }
+        return list.toSet().toList()..sort();
+    }
+  }
+
+  /// مراجعة الآيات ذات الدقة الأقل من العتبة المحددة
+  List<ReviewItemDetail> get ayahReviewItems {
+    final list = <ReviewItemDetail>[];
+    int idx = 1;
     for (final seg in _segments) {
-      if (seg.similarity < 0.95) {
-        list.add(seg.start);
+      if (seg.similarity < _ayahReviewThreshold) {
+        list.add(ReviewItemDetail(
+          index: idx++,
+          timestamp: seg.start,
+          endTime: seg.end,
+          text: seg.text,
+          ayahText: seg.text,
+          ayahNumber: seg.ayahNumber,
+          score: seg.similarity,
+          granularity: AlignmentGranularity.ayah,
+        ));
       }
+    }
+    list.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return list;
+  }
+
+  /// مراجعة الأنفاس/السكتات ذات الدقة الأقل من العتبة المحددة
+  List<ReviewItemDetail> get breathReviewItems {
+    final list = <ReviewItemDetail>[];
+    int idx = 1;
+    for (int i = 0; i < _breathGroups.length; i++) {
+      final bg = _breathGroups[i];
+      if (bg.similarity < _breathReviewThreshold) {
+        list.add(ReviewItemDetail(
+          index: idx++,
+          timestamp: bg.startTime,
+          endTime: bg.endTime,
+          text: bg.text.isNotEmpty ? bg.text : 'سكتة #${bg.groupIndex}',
+          ayahText: bg.text,
+          breathIndex: bg.groupIndex,
+          score: bg.similarity,
+          granularity: AlignmentGranularity.breath,
+        ));
+      }
+    }
+    list.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return list;
+  }
+
+  /// مراجعة الكلمات ذات الدقة الأقل من العتبة المحددة
+  List<ReviewItemDetail> get wordReviewItems {
+    final list = <ReviewItemDetail>[];
+    int idx = 1;
+    for (final seg in _segments) {
       for (final w in seg.words) {
-        if (w.confidence < 0.90) {
-          list.add(w.start);
+        if (w.confidence < _wordReviewThreshold) {
+          list.add(ReviewItemDetail(
+            index: idx++,
+            timestamp: w.start,
+            endTime: w.end,
+            text: w.word,
+            ayahText: seg.text,
+            ayahNumber: seg.ayahNumber,
+            score: w.confidence,
+            granularity: AlignmentGranularity.word,
+          ));
         }
       }
     }
-    final sorted = list.toSet().toList()..sort();
-    return sorted;
+    list.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return list;
   }
+
+  /// عناصر المراجعة النشطة بحسب المستوى النشط
+  List<ReviewItemDetail> get activeReviewItems {
+    switch (_activeGranularity) {
+      case AlignmentGranularity.ayah:
+        return ayahReviewItems;
+      case AlignmentGranularity.breath:
+        return breathReviewItems;
+      case AlignmentGranularity.word:
+        return wordReviewItems;
+    }
+  }
+
+  /// تفاصيل جميع مواضع المراجعة وتدقيق الدقة
+  List<ReviewItemDetail> get detailedReviewItems => activeReviewItems;
 
   double? getNextRepetition(double currentSec) {
     final reps = repetitionTimestamps;

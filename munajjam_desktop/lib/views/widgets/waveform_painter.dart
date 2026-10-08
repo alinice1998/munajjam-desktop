@@ -20,6 +20,9 @@ class WaveformPainter extends CustomPainter {
   final double? dragTimeSec;
   final double visibleStartX;
   final double visibleWidth;
+  final double ayahThreshold;
+  final double breathThreshold;
+  final double wordThreshold;
 
   WaveformPainter({
     required this.peaks,
@@ -38,6 +41,9 @@ class WaveformPainter extends CustomPainter {
     this.dragTimeSec,
     this.visibleStartX = 0.0,
     this.visibleWidth = 10000.0,
+    this.ayahThreshold = 0.95,
+    this.breathThreshold = 0.95,
+    this.wordThreshold = 0.90,
   });
 
   @override
@@ -67,7 +73,6 @@ class WaveformPainter extends CustomPainter {
     final double endVisibleSec = endVisibleX / pixelsPerSecond;
 
     // 1. Draw Time Ruler (top bar)
-    // Only draw the background for the visible area to save fill rate
     final visibleRectX = startVisibleX.clamp(0.0, width);
     final visibleRectW = (endVisibleX.clamp(0.0, width) - visibleRectX);
     if (visibleRectW > 0) {
@@ -137,7 +142,6 @@ class WaveformPainter extends CustomPainter {
 
     // 4. Draw Waveform Peaks (True Physical Audio Envelope)
     if (peaks.isNotEmpty) {
-      // Fixed on-screen step between vertical bars for maximum visual density (2.4px spacing)
       const double step = 2.4;
       
       final int startI = (startVisibleX / step).floor().clamp(0, (width / step).ceil());
@@ -150,60 +154,47 @@ class WaveformPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round
         ..strokeWidth = barWidth;
 
-      final wavePaintPlayedSilent = Paint()
-        ..color = AppColors.primaryEmerald.withOpacity(0.35)
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = barWidth;
-
       final wavePaintUnplayed = Paint()
-        ..color = Colors.white.withOpacity(0.65)
+        ..color = const Color(0xFF64748B)
         ..strokeCap = StrokeCap.round
         ..strokeWidth = barWidth;
 
-      final wavePaintUnplayedSilent = Paint()
-        ..color = Colors.white.withOpacity(0.18)
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = barWidth;
+      final double playX = currentPosition * pixelsPerSecond;
 
-      final playheadX = currentPosition * pixelsPerSecond;
-      final peaksCount = peaks.length;
+      for (int i = startI; i < endI; i++) {
+        final double x = i * step;
+        final double progress = x / width;
+        final int peakIdx = (progress * (peaks.length - 1)).round().clamp(0, peaks.length - 1);
+        final double val = peaks[peakIdx];
 
-      for (int i = startI; i <= endI; i++) {
-        final x = i * step;
-        final timeSec = x / pixelsPerSecond;
-        if (timeSec > duration) break;
+        final double minBarHeight = 1.5;
+        final double barH = max(minBarHeight, val * (waveHeight / 2) * 0.95);
 
-        // Continuous sampling / interpolation from peak envelope
-        final floatIdx = duration > 0 ? (timeSec / duration) * (peaksCount - 1) : 0.0;
-        final idx0 = floatIdx.floor().clamp(0, peaksCount - 1);
-        final idx1 = floatIdx.ceil().clamp(0, peaksCount - 1);
-        final frac = floatIdx - idx0;
-        final amp = (peaks[idx0] * (1.0 - frac) + peaks[idx1] * frac);
+        final bool isPlayed = x <= playX;
+        final paintToUse = isPlayed ? wavePaintPlayed : wavePaintUnplayed;
 
-        final barHeight = (amp * (waveHeight * 0.85)).clamp(2.5, waveHeight * 0.90);
-        final top = centerY - (barHeight / 2);
-        final bottom = centerY + (barHeight / 2);
-
-        final isSilent = amp < 0.035;
-        final paint = x <= playheadX
-            ? (isSilent ? wavePaintPlayedSilent : wavePaintPlayed)
-            : (isSilent ? wavePaintUnplayedSilent : wavePaintUnplayed);
-
-        canvas.drawLine(Offset(x, top), Offset(x, bottom), paint);
+        canvas.drawLine(
+          Offset(x, centerY - barH),
+          Offset(x, centerY + barH),
+          paintToUse,
+        );
       }
     }
 
-    // 4. Draw Playhead (Current Time Indicator)
+    // 5. Draw Playhead (Glowing playback needle)
     final playX = currentPosition * pixelsPerSecond;
-    if (playX >= startVisibleX && playX <= endVisibleX) {
+    if (playX >= startVisibleX - 10 && playX <= endVisibleX + 10) {
+      final glowPaint = Paint()
+        ..color = AppColors.playhead.withOpacity(0.35)
+        ..strokeWidth = 6;
+      canvas.drawLine(Offset(playX, 0), Offset(playX, height), glowPaint);
+
       final playheadPaint = Paint()
         ..color = AppColors.playhead
         ..strokeWidth = 2;
 
-      // Glowing vertical line
       canvas.drawLine(Offset(playX, 0), Offset(playX, height), playheadPaint);
 
-      // Playhead head handle
       final headPath = Path();
       headPath.moveTo(playX - 6, 0);
       headPath.lineTo(playX + 6, 0);
@@ -227,9 +218,12 @@ class WaveformPainter extends CustomPainter {
       final rect = Rect.fromLTWH(startX, topY, endX - startX, height);
 
       final isActive = i == activeIndex;
-      final color = a.similarity >= 0.95
-          ? AppColors.regionHigh
-          : (a.similarity >= 0.90 ? AppColors.regionMed : AppColors.regionLow);
+      final isLow = a.similarity < ayahThreshold;
+      final isCriticallyLow = a.similarity < 0.85;
+
+      final color = isLow
+          ? (isCriticallyLow ? AppColors.regionLow : AppColors.regionMed)
+          : (a.similarity >= 0.95 ? AppColors.regionHigh : AppColors.regionMed);
 
       final fillPaint = Paint()
         ..color = isActive ? AppColors.regionSelected : color
@@ -237,12 +231,13 @@ class WaveformPainter extends CustomPainter {
       canvas.drawRect(rect, fillPaint);
 
       final borderPaint = Paint()
-        ..color = isActive ? AppColors.primaryTeal : Colors.white.withOpacity(0.2)
-        ..strokeWidth = isActive ? 2 : 1
+        ..color = isActive
+            ? AppColors.primaryTeal
+            : (isLow ? AppColors.dangerRed : Colors.white.withOpacity(0.2))
+        ..strokeWidth = (isActive || isLow) ? 2 : 1
         ..style = PaintingStyle.stroke;
       canvas.drawRect(rect, borderPaint);
 
-      // Drag handles on left/right edges
       final isStartDragging = draggingIndex == i && isDraggingStart;
       final isEndDragging = draggingIndex == i && !isDraggingStart;
       final isStartHovered = hoveredIndex == i && hoveredIsStart == true;
@@ -269,15 +264,15 @@ class WaveformPainter extends CustomPainter {
         timeSec: isEndDragging ? (dragTimeSec ?? a.end) : a.end,
       );
 
-      // Label
+      final lowSuffix = isLow ? ' (${(a.similarity * 100).toInt()}%)' : '';
       final tp = TextPainter(
         text: TextSpan(
-          text: 'آية ${a.ayahNumber}',
+          text: 'آية ${a.ayahNumber}$lowSuffix',
           style: TextStyle(
-            color: Colors.white,
+            color: isLow ? const Color(0xFFFECACA) : Colors.white,
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            backgroundColor: Colors.black.withOpacity(0.5),
+            backgroundColor: isLow ? const Color(0xCC991B1B) : Colors.black.withOpacity(0.5),
           ),
         ),
         textDirection: TextDirection.rtl,
@@ -298,14 +293,20 @@ class WaveformPainter extends CustomPainter {
 
       final isActive = i == activeIndex;
       final isRep = b.isRepetition;
+      final isLow = b.similarity < breathThreshold;
+      final isCriticallyLow = b.similarity < 0.85;
 
       final Color regionFill = isRep
           ? (isActive ? AppColors.repetitionPurple.withOpacity(0.55) : AppColors.repetitionRegion)
-          : (isActive ? AppColors.regionSelected : const Color(0x400D9488));
+          : (isLow
+              ? (isCriticallyLow ? AppColors.regionLow : const Color(0x4DF59E0B))
+              : (isActive ? AppColors.regionSelected : const Color(0x400D9488)));
 
       final Color regionBorder = isRep
           ? AppColors.repetitionPurple
-          : (isActive ? AppColors.primaryEmerald : const Color(0xFF14B8A6).withOpacity(0.5));
+          : (isLow
+              ? (isCriticallyLow ? AppColors.dangerRed : const Color(0xFFF59E0B))
+              : (isActive ? AppColors.primaryEmerald : const Color(0xFF14B8A6).withOpacity(0.5)));
 
       final fillPaint = Paint()
         ..color = regionFill
@@ -314,7 +315,7 @@ class WaveformPainter extends CustomPainter {
 
       final borderPaint = Paint()
         ..color = regionBorder
-        ..strokeWidth = (isActive || isRep) ? 2 : 1
+        ..strokeWidth = (isActive || isRep || isLow) ? 2 : 1
         ..style = PaintingStyle.stroke;
       canvas.drawRect(rect, borderPaint);
 
@@ -345,14 +346,19 @@ class WaveformPainter extends CustomPainter {
       );
 
       final repSuffix = isRep ? ' 🔁 تكرار' : '';
+      final lowSuffix = isLow ? ' (${(b.similarity * 100).toInt()}%)' : '';
       final tp = TextPainter(
         text: TextSpan(
-          text: 'سكتة ${b.groupIndex} (${b.duration.toStringAsFixed(1)}s)$repSuffix',
+          text: 'سكتة ${b.groupIndex} (${b.duration.toStringAsFixed(1)}s)$repSuffix$lowSuffix',
           style: TextStyle(
-            color: isRep ? const Color(0xFFE9D5FF) : Colors.white,
+            color: isRep
+                ? const Color(0xFFE9D5FF)
+                : (isLow ? const Color(0xFFFECACA) : Colors.white),
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            backgroundColor: isRep ? const Color(0xCC581C87) : Colors.black.withOpacity(0.5),
+            backgroundColor: isRep
+                ? const Color(0xCC581C87)
+                : (isLow ? const Color(0xCC991B1B) : Colors.black.withOpacity(0.5)),
           ),
         ),
         textDirection: TextDirection.rtl,
@@ -375,33 +381,49 @@ class WaveformPainter extends CustomPainter {
         final endX = word.end * pixelsPerSecond;
         final rect = Rect.fromLTWH(startX, topY, endX - startX, height);
         final isRep = word.isRepetition;
+        final isLow = word.confidence < wordThreshold;
+        final isCriticallyLow = word.confidence < 0.85;
+
+        final Color wordFill = isRep
+            ? AppColors.repetitionRegion
+            : (isLow
+                ? (isCriticallyLow ? AppColors.regionLow : const Color(0x4DF59E0B))
+                : const Color(0x336366F1));
+
+        final Color wordBorder = isRep
+            ? AppColors.repetitionPurple
+            : (isLow
+                ? (isCriticallyLow ? AppColors.dangerRed : const Color(0xFFF59E0B))
+                : const Color(0xFF818CF8).withOpacity(0.5));
+
         final fillPaint = Paint()
-          ..color = isRep ? AppColors.repetitionRegion : const Color(0x336366F1)
+          ..color = wordFill
           ..style = PaintingStyle.fill;
         canvas.drawRect(rect, fillPaint);
 
         final borderPaint = Paint()
-          ..color = isRep ? AppColors.repetitionPurple : const Color(0xFF818CF8).withOpacity(0.5)
-          ..strokeWidth = isRep ? 1.5 : 1
+          ..color = wordBorder
+          ..strokeWidth = (isRep || isLow) ? 1.5 : 1
           ..style = PaintingStyle.stroke;
         canvas.drawRect(rect, borderPaint);
 
         _drawHandle(canvas, startX, topY, height, isStart: true);
         _drawHandle(canvas, endX, topY, height, isStart: false);
 
-        if (endX - startX > 25) {
+        if (endX - startX > 20) {
           final tp = TextPainter(
             text: TextSpan(
               text: word.word,
               style: TextStyle(
-                color: Colors.white,
+                color: isLow ? const Color(0xFFFECACA) : Colors.white,
                 fontSize: 10,
-                backgroundColor: Colors.black.withOpacity(0.4),
+                fontWeight: isLow ? FontWeight.bold : FontWeight.normal,
+                backgroundColor: isLow ? const Color(0xCC991B1B) : Colors.black.withOpacity(0.4),
               ),
             ),
             textDirection: TextDirection.rtl,
           );
-          tp.layout(maxWidth: endX - startX - 4);
+          tp.layout(maxWidth: max(10, endX - startX - 4));
           tp.paint(canvas, Offset(startX + 4, topY + 4));
         }
       }
@@ -448,30 +470,25 @@ class WaveformPainter extends CustomPainter {
       final mins = (timeSec / 60).floor();
       final secs = (timeSec % 60).floor();
       final ms = ((timeSec % 1) * 1000).floor();
-      final timeStr = '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}.${ms.toString().padLeft(3, '0')}s';
-      final badgeText = isShiftPressed ? '$timeStr (🔓 منفرد)' : '$timeStr (🔗 متزامن)';
+      final text = '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}.${ms.toString().padLeft(3, '0')}';
 
       final tp = TextPainter(
         text: TextSpan(
-          text: badgeText,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-          ),
+          text: text,
+          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
         ),
         textDirection: TextDirection.ltr,
       );
       tp.layout();
 
-      final badgeRect = Rect.fromLTWH(
-        x - (tp.width / 2) - 6,
-        topY - 20,
-        tp.width + 12,
-        18,
+      final badgeRect = Rect.fromCenter(
+        center: Offset(x, topY - 10),
+        width: tp.width + 10,
+        height: 18,
       );
+
       final badgePaint = Paint()
-        ..color = isShiftPressed ? const Color(0xFFD97706) : const Color(0xFF047857)
+        ..color = isLinked ? const Color(0xFF0F172A) : const Color(0xFF78350F)
         ..style = PaintingStyle.fill;
       canvas.drawRRect(RRect.fromRectAndRadius(badgeRect, const Radius.circular(5)), badgePaint);
       tp.paint(canvas, Offset(x - (tp.width / 2), topY - 18));
@@ -494,6 +511,9 @@ class WaveformPainter extends CustomPainter {
         oldDelegate.visibleWidth != visibleWidth ||
         oldDelegate.ayahs != ayahs ||
         oldDelegate.breaths != breaths ||
-        oldDelegate.peaks != peaks;
+        oldDelegate.peaks != peaks ||
+        oldDelegate.ayahThreshold != ayahThreshold ||
+        oldDelegate.breathThreshold != breathThreshold ||
+        oldDelegate.wordThreshold != wordThreshold;
   }
 }
