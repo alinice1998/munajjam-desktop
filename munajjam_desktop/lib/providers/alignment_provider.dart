@@ -157,11 +157,11 @@ class AlignmentProvider extends ChangeNotifier {
     }
     for (final bg in _breathGroups) {
       if (bg.isRepetition) {
-        int? ayahNum;
+        int? ayahNumber;
         String aText = bg.text;
         for (final seg in _segments) {
           if (bg.startTime >= seg.start - 0.1 && bg.startTime <= seg.end + 0.1) {
-            ayahNum = seg.ayahNumber;
+            ayahNumber = seg.ayahNumber;
             aText = seg.text;
             break;
           }
@@ -172,7 +172,7 @@ class AlignmentProvider extends ChangeNotifier {
           endTime: bg.endTime,
           text: bg.text.isNotEmpty ? bg.text : 'سكتة #${bg.groupIndex}',
           ayahText: aText,
-          ayahNumber: ayahNum,
+          ayahNumber: ayahNumber,
           isWord: false,
           repetitionType: bg.repetitionType,
         ));

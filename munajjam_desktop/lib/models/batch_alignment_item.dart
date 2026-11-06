@@ -180,12 +180,12 @@ class SurahFileNameDetector {
     final cleanName = fileName.trim();
 
     // 1. فحص وجود "سورة" صريحة متبوعة برقم (مثل: "Surah_018", "surah-1", "سورة 112")
-    final explicitSurahNumMatch = RegExp(
-      r'(?:surah|sura|سورة|سوره)[\s_\-]*0*([1-9]\d{0,2})\b',
+    final explicitSurahNumberMatch = RegExp(
+      r'(?:surah|sura|سورة|سوره)[\s_\-]*0*([1-9]\d{0,2})\b', // terminology: ignore (spellings found in file names)
       caseSensitive: false,
     ).firstMatch(cleanName);
-    if (explicitSurahNumMatch != null) {
-      final id = int.tryParse(explicitSurahNumMatch.group(1)!);
+    if (explicitSurahNumberMatch != null) {
+      final id = int.tryParse(explicitSurahNumberMatch.group(1)!);
       if (id != null && id >= 1 && id <= 114) {
         final surah = getSurahById(id);
         return (surah.id, surah.nameArabic);

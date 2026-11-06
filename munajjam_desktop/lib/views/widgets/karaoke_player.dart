@@ -221,7 +221,7 @@ class KaraokePlayer extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              // Main Quran Display Box with Fluid Word-by-Word Glowing Highlight
+              // Main Quran Display Box with Fluid Per-Word Glowing Highlight
               Container(
                 constraints: const BoxConstraints(minHeight: 110),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),

@@ -78,15 +78,15 @@ class QuranDataService {
 
           if (matchedText.isEmpty) continue;
 
-          int ayahNum = 1;
+          int ayahNumber = 1;
           if (refFrom.isNotEmpty && refFrom.contains(':')) {
             final parts = refFrom.split(':');
             if (parts.length >= 2) {
               detectedSurahId = int.tryParse(parts[0]) ?? detectedSurahId;
-              ayahNum = int.tryParse(parts[1]) ?? 1;
+              ayahNumber = int.tryParse(parts[1]) ?? 1;
             }
           } else if (specialType == 'Basmala') {
-            ayahNum = 1;
+            ayahNumber = 1;
           } else if (specialType == "Isti'adha") {
             continue;
           }
@@ -96,13 +96,13 @@ class QuranDataService {
             word: matchedText,
             start: timeFrom,
             end: timeTo,
-            ayahNumber: ayahNum,
+            ayahNumber: ayahNumber,
             confidence: (s['confidence'] as num?)?.toDouble() ?? 1.0,
             isRepetition: isRep,
             repetitionType: isRep ? (s['repetition_type'] ?? 'waqf_ibtida') : null,
           );
 
-          ayahWordsMap.putIfAbsent(ayahNum, () => []).add(wordSeg);
+          ayahWordsMap.putIfAbsent(ayahNumber, () => []).add(wordSeg);
 
           if (splitGroupId != null && splitGroupId.isNotEmpty) {
             splitGroupMap.putIfAbsent(splitGroupId, () => []).add(wordSeg);

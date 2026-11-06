@@ -22,7 +22,7 @@ void main() {
     expect(res5.$1, 36);
     expect(res5.$2, 'يس');
 
-    final res6 = SurahFileNameDetector.detectSurah('112_Al-Ikhlas.m4a');
+    final res6 = SurahFileNameDetector.detectSurah('112_Al-Ikhlas.m4a'); // terminology: ignore (a file name)
     expect(res6.$1, 112);
     expect(res6.$2, 'الإخلاص');
 
