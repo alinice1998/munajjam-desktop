@@ -277,7 +277,7 @@ class _WaveformEditorState extends State<WaveformEditor> {
 
   void _showContextMenu(Offset globalPos, double clickSec, AlignmentProvider alignProvider) {
     int? foundAyahIdx;
-    AyahSegment? foundAyah;
+    AyahTiming? foundAyah;
     for (int i = 0; i < alignProvider.segments.length; i++) {
       if (clickSec >= alignProvider.segments[i].start && clickSec <= alignProvider.segments[i].end) {
         foundAyahIdx = i;
@@ -396,7 +396,7 @@ class _WaveformEditorState extends State<WaveformEditor> {
           title: 'تعديل توقيت آية ${foundAyah.ayahNumber}',
           initialStart: foundAyah.start,
           initialEnd: foundAyah.end,
-          onSave: (s, e) => alignProvider.updateAyahSegment(foundAyahIdx!, start: s, end: e),
+          onSave: (s, e) => alignProvider.updateAyahTiming(foundAyahIdx!, start: s, end: e),
         );
       } else if (value == 'split_breath' && foundBreathIdx != null) {
         alignProvider.splitBreath(foundBreathIdx, clickSec);
@@ -435,7 +435,7 @@ class _WaveformEditorState extends State<WaveformEditor> {
             title: 'تعديل توقيت آية ${seg.ayahNumber}',
             initialStart: seg.start,
             initialEnd: seg.end,
-            onSave: (s, e) => alignProvider.updateAyahSegment(i, start: s, end: e),
+            onSave: (s, e) => alignProvider.updateAyahTiming(i, start: s, end: e),
           );
           break;
         }
@@ -682,14 +682,14 @@ class _WaveformEditorState extends State<WaveformEditor> {
     if (alignProvider.activeGranularity == AlignmentGranularity.ayah && _draggingIndex != null) {
       final idx = _draggingIndex!;
       if (_isDraggingStart) {
-        alignProvider.updateAyahSegment(idx, start: newSec);
+        alignProvider.updateAyahTiming(idx, start: newSec);
         if (syncAdjacent && idx > 0) {
-          alignProvider.updateAyahSegment(idx - 1, end: newSec);
+          alignProvider.updateAyahTiming(idx - 1, end: newSec);
         }
       } else {
-        alignProvider.updateAyahSegment(idx, end: newSec);
+        alignProvider.updateAyahTiming(idx, end: newSec);
         if (syncAdjacent && idx < alignProvider.segments.length - 1) {
-          alignProvider.updateAyahSegment(idx + 1, start: newSec);
+          alignProvider.updateAyahTiming(idx + 1, start: newSec);
         }
       }
     }
@@ -717,14 +717,14 @@ class _WaveformEditorState extends State<WaveformEditor> {
       final ayah = alignProvider.segments[aIdx];
 
       if (_isDraggingStart) {
-        alignProvider.updateWordSegment(aIdx, wIdx, start: newSec);
+        alignProvider.updateWordTiming(aIdx, wIdx, start: newSec);
         if (syncAdjacent && wIdx > 0) {
-          alignProvider.updateWordSegment(aIdx, wIdx - 1, end: newSec);
+          alignProvider.updateWordTiming(aIdx, wIdx - 1, end: newSec);
         }
       } else {
-        alignProvider.updateWordSegment(aIdx, wIdx, end: newSec);
+        alignProvider.updateWordTiming(aIdx, wIdx, end: newSec);
         if (syncAdjacent && wIdx < ayah.words.length - 1) {
-          alignProvider.updateWordSegment(aIdx, wIdx + 1, start: newSec);
+          alignProvider.updateWordTiming(aIdx, wIdx + 1, start: newSec);
         }
       }
     }

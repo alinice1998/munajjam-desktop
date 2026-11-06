@@ -8,7 +8,7 @@ class AlignmentJobStatus {
   final String status;
   final int progress;
   final String message;
-  final List<AyahSegment>? data;
+  final List<AyahTiming>? data;
   final List<BreathGroup>? breathGroups;
 
   AlignmentJobStatus({
@@ -82,10 +82,10 @@ class AlignerApiService {
     final progress = (json['progress'] as num?)?.toInt() ?? 0;
     final message = json['message'] ?? '';
 
-    List<AyahSegment>? ayahs;
+    List<AyahTiming>? ayahs;
     if (json['data'] != null) {
       final list = json['data'] as List;
-      ayahs = list.map((item) => AyahSegment.fromJson(item)).toList();
+      ayahs = list.map((item) => AyahTiming.fromJson(item)).toList();
     }
 
     List<BreathGroup>? breaths;

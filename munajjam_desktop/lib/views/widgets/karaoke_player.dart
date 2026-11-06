@@ -41,7 +41,7 @@ class KaraokePlayer extends StatelessWidget {
           final currentTime = pos.inMilliseconds / 1000.0;
 
           // 1. Precise Ayah Segment Matching Algorithm (identical to QAPlayer.tsx)
-          AyahSegment? currentSegment;
+          AyahTiming? currentSegment;
 
           final selectedAyahIdx = alignProvider.currentSegmentIndex;
           if (selectedAyahIdx != null && selectedAyahIdx >= 0 && selectedAyahIdx < segments.length) {

@@ -659,7 +659,7 @@ class HybridQuranAligner:
 
             # محاذاة مقطع النَّفَس قسرياً بدقة الإطار الواحد عبر Wav2Vec2
             segment_alignments = self.wav2vec2.align_segment(
-                audio_segment=chunk_audio,
+                audio_chunk=chunk_audio,
                 words=group_words_raw,
                 sr=sr
             )

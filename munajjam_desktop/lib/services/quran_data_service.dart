@@ -40,10 +40,10 @@ class QuranDataService {
     return [];
   }
 
-  List<AyahSegment> mergeQuranTextIntoSegments(List<AyahSegment> segments, List<String> quranText) {
+  List<AyahTiming> mergeQuranTextIntoSegments(List<AyahTiming> segments, List<String> quranText) {
     if (quranText.isEmpty) return segments;
 
-    final result = <AyahSegment>[];
+    final result = <AyahTiming>[];
     for (int i = 0; i < segments.length; i++) {
       final seg = segments[i];
       final text = i < quranText.length ? quranText[i] : seg.text;
@@ -62,8 +62,8 @@ class QuranDataService {
       // 1. صيغة segments (مثل ملف tmpdve8r7_6.json أو ملفات Ground Truth)
       if (data.containsKey('segments') && data['segments'] is List) {
         final segmentsList = data['segments'] as List;
-        final Map<int, List<WordSegment>> ayahWordsMap = {};
-        final Map<String, List<WordSegment>> splitGroupMap = {};
+        final Map<int, List<WordTiming>> ayahWordsMap = {};
+        final Map<String, List<WordTiming>> splitGroupMap = {};
         int detectedSurahId = defaultSurahId;
 
         for (final item in segmentsList) {
@@ -92,7 +92,7 @@ class QuranDataService {
           }
 
           final isRep = s['has_repeated_words'] == true || s['is_repetition'] == true;
-          final wordSeg = WordSegment(
+          final wordSeg = WordTiming(
             word: matchedText,
             start: timeFrom,
             end: timeTo,
@@ -109,7 +109,7 @@ class QuranDataService {
           }
         }
 
-        final ayahs = <AyahSegment>[];
+        final ayahs = <AyahTiming>[];
         final sortedAyahKeys = ayahWordsMap.keys.toList()..sort();
         for (final aNum in sortedAyahKeys) {
           final wList = ayahWordsMap[aNum]!;
@@ -117,7 +117,7 @@ class QuranDataService {
           final avgConf = wList.isNotEmpty
               ? wList.map((w) => w.confidence).reduce((a, b) => a + b) / wList.length
               : 1.0;
-          ayahs.add(AyahSegment(
+          ayahs.add(AyahTiming(
             ayahNumber: aNum,
             start: wList.first.start,
             end: wList.last.end,
@@ -176,7 +176,7 @@ class QuranDataService {
       final surahId = (data['surah_id'] as num?)?.toInt() ?? defaultSurahId;
 
       if (rawAyahs != null) {
-        final ayahs = rawAyahs.map((a) => AyahSegment.fromJson(Map<String, dynamic>.from(a as Map))).toList();
+        final ayahs = rawAyahs.map((a) => AyahTiming.fromJson(Map<String, dynamic>.from(a as Map))).toList();
         final breaths = rawBreaths != null
             ? rawBreaths.map((b) => BreathGroup.fromJson(Map<String, dynamic>.from(b as Map))).toList()
             : <BreathGroup>[];

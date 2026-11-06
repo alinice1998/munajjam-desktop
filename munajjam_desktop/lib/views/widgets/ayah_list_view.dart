@@ -995,7 +995,7 @@ class _AyahListViewState extends State<AyahListView> {
     );
   }
 
-  Widget _buildAllSurahWords(List<AyahSegment> segments, AudioService audioService, bool isRTL) {
+  Widget _buildAllSurahWords(List<AyahTiming> segments, AudioService audioService, bool isRTL) {
     if (segments.isEmpty || segments.every((s) => s.words.isEmpty)) {
       return const Center(
         child: Text('لا توجد كلمات محاذاة', style: TextStyle(color: AppColors.textMuted)),
@@ -1376,7 +1376,7 @@ class _AyahListViewState extends State<AyahListView> {
     );
   }
 
-  Widget _buildWordBadge(WordSegment w, AudioService audioService, {double? threshold, bool large = false}) {
+  Widget _buildWordBadge(WordTiming w, AudioService audioService, {double? threshold, bool large = false}) {
     final wordThreshold = threshold ?? 0.90;
     final isLowConfidence = w.confidence < wordThreshold;
     return InkWell(

@@ -9,7 +9,7 @@ class WaveformPainter extends CustomPainter {
   final double currentPosition;
   final double pixelsPerSecond;
   final AlignmentGranularity granularity;
-  final List<AyahSegment> ayahs;
+  final List<AyahTiming> ayahs;
   final List<BreathGroup> breaths;
   final int? activeIndex;
   final int? hoveredIndex;

@@ -194,7 +194,7 @@ class Wav2Vec2ForcedAligner:
 
     @staticmethod
     def track_voice_end(
-        audio_segment: np.ndarray,
+        audio_chunk: np.ndarray,
         sr: int,
         min_time_sec: float,
         max_time_sec: float,
@@ -204,19 +204,19 @@ class Wav2Vec2ForcedAligner:
         تتبع تلاشي الطاقة الصوتية لصوت القارئ (RMS Voice Decay Tracking)
         لحفظ امتداد الحرف الأخير والمدود وأحرف القلقلة ومنع البتر، مع التوقف فور هبوط الصوت إلى السكون لمنع التقاط أصوات الشهيق أو بداية الآية التالية.
         """
-        if len(audio_segment) == 0 or max_time_sec <= min_time_sec:
+        if len(audio_chunk) == 0 or max_time_sec <= min_time_sec:
             return min_time_sec
 
         hop_length = int(0.01 * sr)     # 10ms hops
         frame_length = int(0.025 * sr)  # 25ms window
 
         start_sample = max(0, int(min_time_sec * sr))
-        end_sample = min(len(audio_segment), int(max_time_sec * sr))
+        end_sample = min(len(audio_chunk), int(max_time_sec * sr))
 
         if end_sample <= start_sample:
             return min_time_sec
 
-        sub_audio = audio_segment[start_sample:end_sample]
+        sub_audio = audio_chunk[start_sample:end_sample]
         if len(sub_audio) < frame_length:
             return min_time_sec
 
@@ -252,7 +252,7 @@ class Wav2Vec2ForcedAligner:
 
     def align_segment(
         self,
-        audio_segment: np.ndarray,
+        audio_chunk: np.ndarray,
         words: List[str],
         sr: int = 16000
     ) -> List[Dict[str, Any]]:
@@ -261,7 +261,7 @@ class Wav2Vec2ForcedAligner:
         بالاعتماد بنسبة 100% على مصفوفة المسار العصبي ومؤشرات فريمات الحالات (CTC Trellis State Partitioning)
         مع تطبيق المحاذاة الفونيمية التجويدية لأحكام الوصل (همزة الوصل واللام الشمسية والقمرية).
         """
-        if len(words) == 0 or len(audio_segment) == 0:
+        if len(words) == 0 or len(audio_chunk) == 0:
             return []
 
         # 1. المعالجة الصوتية التجويدية للكلمات (إسقاط همزة الوصل واللام الشمسية في الوصل الصوتي داخل النَّفَس)
@@ -313,11 +313,11 @@ class Wav2Vec2ForcedAligner:
             return []
 
         # 2. استخراج مصفوفة احتمالات الإطارات الصوتية (Log-Softmax)
-        orig_sample_count = len(audio_segment)
+        orig_sample_count = len(audio_chunk)
         if self.is_onnx and self.onnx_session is not None:
-            mean = np.mean(audio_segment)
-            std = np.std(audio_segment) + 1e-7
-            norm_audio = ((audio_segment - mean) / std).astype(np.float32)
+            mean = np.mean(audio_chunk)
+            std = np.std(audio_chunk) + 1e-7
+            norm_audio = ((audio_chunk - mean) / std).astype(np.float32)
 
             # Length Bucketing (Step-Padding to 1.0s = 16,000 samples)
             # This ensures DirectML/GPU reuses fixed memory allocations across all segments
@@ -356,7 +356,7 @@ class Wav2Vec2ForcedAligner:
         else:
             import torch
             inputs = self.processor(
-                audio_segment,
+                audio_chunk,
                 sampling_rate=sr,
                 return_tensors="pt"
             ).input_values.to(self.device)
@@ -366,7 +366,7 @@ class Wav2Vec2ForcedAligner:
                 log_probs = torch.nn.functional.log_softmax(logits, dim=-1)[0].cpu().numpy()
 
         num_frames = log_probs.shape[0]
-        total_duration = len(audio_segment) / sr
+        total_duration = len(audio_chunk) / sr
         frame_duration = total_duration / max(num_frames, 1)
 
         # 3. تنفيذ خوارزمية مسار فيتربي العصبية واستخراج مسار الحالات الكامل
