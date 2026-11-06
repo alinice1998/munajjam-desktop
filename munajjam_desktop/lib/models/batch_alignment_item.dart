@@ -1,5 +1,6 @@
 import 'package:path/path.dart' as p;
 import 'surah_model.dart';
+import 'surah_spellings.dart';
 
 enum BatchItemStatus {
   pending,    // بانتظار بدء التزمين
@@ -272,11 +273,11 @@ class SurahFileNameDetector {
       }
     }
 
-    // 7. مطابقة الاسم الإنجليزي أو اللاتيني (مثل: Ya-Sin, Ta-Ha, Sad, Qaf, Al-Baqarah)
+    // 7. مطابقة الاسم الإنجليزي أو الكتابة اللاتينية الشائعة في أسماء الملفات (surah_spellings.dart)
     final normLatinInput = normalizeLatin(cleanName);
     for (final surah in allSurahsList) {
       final normEng = normalizeLatin(surah.nameEnglish);
-      final normTrans = normalizeLatin(surah.nameTransliteration);
+      final normTrans = normalizeLatin(surahLatinSpellings[surah.id] ?? surah.nameTransliteration);
       if (normEng.length >= 3 && normLatinInput.contains(normEng)) {
         return (surah.id, surah.nameArabic);
       }
@@ -292,8 +293,8 @@ class SurahFileNameDetector {
         .where((t) => t.isNotEmpty)
         .toList();
     for (final lt in latinTokens) {
-      if (lt == 'taha' || lt == 'ta-ha') return (20, getSurahById(20).nameArabic);
-      if (lt == 'yasin' || lt == 'yaseen' || lt == 'ya-sin') return (36, getSurahById(36).nameArabic);
+      if (lt == 'taha') return (20, getSurahById(20).nameArabic);
+      if (lt == 'yasin' || lt == 'yaseen') return (36, getSurahById(36).nameArabic);
       if (lt == 'sad') return (38, getSurahById(38).nameArabic);
       if (lt == 'qaf') return (50, getSurahById(50).nameArabic);
     }
