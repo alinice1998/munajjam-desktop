@@ -7,16 +7,16 @@ class QuranDataService {
   factory QuranDataService() => _instance;
   QuranDataService._internal();
 
-  Map<String, List<String>> _hafshData = {};
+  Map<String, List<String>> _hafsData = {};
   Map<String, List<String>> _warshData = {};
   bool _loaded = false;
 
   Future<void> loadData() async {
     if (_loaded) return;
     try {
-      final hafshString = await rootBundle.loadString('assets/data/quran_hafsh.json');
-      final Map<String, dynamic> hafshJson = jsonDecode(hafshString);
-      _hafshData = hafshJson.map((k, v) => MapEntry(k, (v as List).map((e) => e.toString()).toList()));
+      final hafsString = await rootBundle.loadString('assets/data/quran_hafsh.json');
+      final Map<String, dynamic> hafsJson = jsonDecode(hafsString);
+      _hafsData = hafsJson.map((k, v) => MapEntry(k, (v as List).map((e) => e.toString()).toList()));
     } catch (_) {}
 
     try {
@@ -28,14 +28,14 @@ class QuranDataService {
     _loaded = true;
   }
 
-  Future<List<String>> getSurahAyahs(int surahId, {String riwaya = 'hafsh'}) async {
+  Future<List<String>> getSurahAyahs(int surahId, {String riwayah = 'hafs_an_asim'}) async {
     await loadData();
     final key = surahId.toString();
-    if (riwaya == 'warsh' && _warshData.containsKey(key)) {
+    if (riwayah == 'warsh_an_nafi' && _warshData.containsKey(key)) {
       return _warshData[key]!;
     }
-    if (_hafshData.containsKey(key)) {
-      return _hafshData[key]!;
+    if (_hafsData.containsKey(key)) {
+      return _hafsData[key]!;
     }
     return [];
   }

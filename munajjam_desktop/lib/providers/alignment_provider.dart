@@ -9,7 +9,7 @@ import '../services/quran_data_service.dart';
 class AlignmentProvider extends ChangeNotifier {
   int _selectedSurahId = 1;
   String _reciterName = '';
-  String _riwaya = 'hafsh';
+  String _riwayah = 'hafs_an_asim';
   AlignmentGranularity _activeGranularity = AlignmentGranularity.ayah;
 
   double _ayahReviewThreshold = 0.95;
@@ -102,7 +102,7 @@ class AlignmentProvider extends ChangeNotifier {
   // Getters
   int get selectedSurahId => _selectedSurahId;
   String get reciterName => _reciterName;
-  String get riwaya => _riwaya;
+  String get riwayah => _riwayah;
   String get repetitionMode => _repetitionMode;
   AlignmentGranularity get activeGranularity => _activeGranularity;
   List<AyahTiming> get segments => _segments;
@@ -326,8 +326,8 @@ class AlignmentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setRiwaya(String riwaya) {
-    _riwaya = riwaya;
+  void setRiwayah(String riwayah) {
+    _riwayah = riwayah;
     notifyListeners();
   }
 
@@ -610,7 +610,7 @@ class AlignmentProvider extends ChangeNotifier {
     _localAudioPath = audioPath;
 
     // Merge Quran text
-    final quranText = await QuranDataService().getSurahAyahs(surahId, riwaya: _riwaya);
+    final quranText = await QuranDataService().getSurahAyahs(surahId, riwayah: _riwayah);
     _segments = QuranDataService().mergeQuranTextIntoSegments(ayahs, quranText);
 
     if (breaths.isNotEmpty) {

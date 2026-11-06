@@ -20,7 +20,7 @@ class BatchAlignmentService extends ChangeNotifier {
   bool _isPaused = false;
   int _currentIndex = -1;
 
-  String _riwaya = 'hafsh';
+  String _riwayah = 'hafs_an_asim';
   String _method = 'hybrid';
   bool _skipExisting = true;
   bool _saveInSubfolder = true;
@@ -37,7 +37,7 @@ class BatchAlignmentService extends ChangeNotifier {
   bool get isRunning => _isRunning;
   bool get isPaused => _isPaused;
   int get currentIndex => _currentIndex;
-  String get riwaya => _riwaya;
+  String get riwayah => _riwayah;
   String get method => _method;
   bool get skipExisting => _skipExisting;
   bool get saveInSubfolder => _saveInSubfolder;
@@ -78,8 +78,8 @@ class BatchAlignmentService extends ChangeNotifier {
     return Duration(milliseconds: (avgMsPerSurah * remainingItemsCount).round());
   }
 
-  void setRiwaya(String val) {
-    _riwaya = val;
+  void setRiwayah(String val) {
+    _riwayah = val;
     notifyListeners();
   }
 
@@ -293,7 +293,7 @@ class BatchAlignmentService extends ChangeNotifier {
       surahId: item.surahId,
       audioFile: audioFile,
       method: _method,
-      riwaya: _riwaya,
+      riwayah: _riwayah,
     );
 
     // متابعة تقدم المهمة حتى الاكتمال
@@ -327,7 +327,7 @@ class BatchAlignmentService extends ChangeNotifier {
     final finalStatus = await completer.future;
 
     // دمج نصوص الآيات وحفظ ملف الـ JSON
-    final quranText = await QuranDataService().getSurahAyahs(item.surahId, riwaya: _riwaya);
+    final quranText = await QuranDataService().getSurahAyahs(item.surahId, riwayah: _riwayah);
     final mergedAyahs = QuranDataService().mergeQuranTextIntoSegments(finalStatus.data ?? [], quranText);
     final breaths = finalStatus.breathGroups ?? [];
 
@@ -341,7 +341,7 @@ class BatchAlignmentService extends ChangeNotifier {
       'surah_id': item.surahId,
       'surah_name': item.surahName,
       'audio_file': item.fileName,
-      'riwaya': _riwaya,
+      'riwayah': _riwayah,
       'method': _method,
       'total_ayahs': mergedAyahs.length,
       'total_breath_groups': breaths.length,
@@ -373,7 +373,7 @@ class BatchAlignmentService extends ChangeNotifier {
       final manifestData = {
         'title': 'Munajjam Khatmah Alignment Manifest',
         'generated_at': DateTime.now().toIso8601String(),
-        'riwaya': _riwaya,
+        'riwayah': _riwayah,
         'method': _method,
         'total_files': _items.length,
         'completed': completedCount,

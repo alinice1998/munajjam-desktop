@@ -104,11 +104,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def load_quran_surah_text(surah_id: int, riwaya: str = "hafsh") -> List[str]:
+# رموز الروايات من سجل القراءات في معيار مرقوم، وملف النص الذي تقرؤه كل رواية
+QURAN_TEXT_FILES = {
+    "hafs_an_asim": "quran_hafsh.json",
+    "warsh_an_nafi": "quran_warsh.json",
+}
+DEFAULT_RIWAYAH = "hafs_an_asim"
+# القيم التي ترسلها النسخ الأقدم من التطبيق
+LEGACY_RIWAYAH_VALUES = {"hafsh": "hafs_an_asim", "warsh": "warsh_an_nafi"}
+
+
+def resolve_riwayah(riwayah: Optional[str] = None, legacy_value: Optional[str] = None) -> str:
+    """يعيد رمز الرواية من السجل، ويقبل اسم الحقل والقيم القديمة"""
+    value = next((v for v in (riwayah, legacy_value) if isinstance(v, str) and v.strip()), DEFAULT_RIWAYAH)
+    value = value.strip().lower()
+    value = LEGACY_RIWAYAH_VALUES.get(value, value)
+    return value if value in QURAN_TEXT_FILES else DEFAULT_RIWAYAH
+
+
+def load_quran_surah_text(surah_id: int, riwayah: str = DEFAULT_RIWAYAH) -> List[str]:
     """تحميل نصوص الآيات للسورة المحددة من ملفات البيانات المحلية"""
-    json_path = os.path.join(DATA_DIR, f"quran_{riwaya}.json")
-    if not os.path.exists(json_path):
-        json_path = os.path.join(DATA_DIR, "quran_hafsh.json")
+    json_path = os.path.join(DATA_DIR, QURAN_TEXT_FILES[resolve_riwayah(riwayah)])
     
     if not os.path.exists(json_path):
         return []
@@ -308,7 +324,8 @@ async def create_align_job(
     background_tasks: BackgroundTasks,
     file: Optional[UploadFile] = File(None),
     audio: Optional[UploadFile] = File(None),
-    riwaya: str = Form("hafsh"),
+    riwayah: Optional[str] = Form(None),
+    legacy_riwayah: Optional[str] = Form(None, alias="riwaya"),  # terminology: ignore (older clients)
     method: str = Form("hybrid"),
     chunk_duration: float = Form(2.0),
     min_silence_ms: Optional[int] = Form(None),
@@ -322,6 +339,7 @@ async def create_align_job(
     نقطة النهاية المستخدمة من تطبيق فلاتر لبدء مهمة التزمين
     """
     upload_file = file or audio
+    riwayah = resolve_riwayah(riwayah, legacy_riwayah)
     if upload_file is None:
         raise HTTPException(status_code=400, detail="يرجى إرفاق الملف الصوتي (file أو audio)")
         
@@ -332,7 +350,7 @@ async def create_align_job(
     if ayahs_text and ayahs_text.strip():
         ayahs = [a.strip() for a in ayahs_text.strip().split("\n") if a.strip()]
     else:
-        ayahs = load_quran_surah_text(surah_id, riwaya)
+        ayahs = load_quran_surah_text(surah_id, riwayah)
         
     if not ayahs:
         raise HTTPException(status_code=400, detail="لم يتم العثور على نصوص الآيات المطلوبة للتزمين.")
@@ -422,7 +440,8 @@ async def align_audio_async(
     file: Optional[UploadFile] = File(None),
     ayahs_text: Optional[str] = Form(None),
     surah_id: int = Form(1),
-    riwaya: str = Form("hafsh"),
+    riwayah: Optional[str] = Form(None),
+    legacy_riwayah: Optional[str] = Form(None, alias="riwaya"),  # terminology: ignore (older clients)
     chunk_duration: float = Form(2.0),
     min_silence_ms: Optional[int] = Form(None),
     min_speech_ms: Optional[int] = Form(None),
@@ -430,13 +449,14 @@ async def align_audio_async(
     method: str = Form("hybrid")
 ):
     upload_file = audio or file
+    riwayah = resolve_riwayah(riwayah, legacy_riwayah)
     if upload_file is None:
         raise HTTPException(status_code=400, detail="يرجى إرفاق الملف الصوتي")
     return await create_align_job(
         surah_id=surah_id,
         background_tasks=background_tasks,
         file=upload_file,
-        riwaya=riwaya,
+        riwayah=riwayah,
         method=method,
         chunk_duration=chunk_duration,
         min_silence_ms=min_silence_ms,
@@ -450,7 +470,8 @@ async def align_audio_endpoint(
     audio: UploadFile = File(...),
     ayahs_text: Optional[str] = Form(None),
     surah_id: int = Form(1),
-    riwaya: str = Form("hafsh"),
+    riwayah: Optional[str] = Form(None),
+    legacy_riwayah: Optional[str] = Form(None, alias="riwaya"),  # terminology: ignore (older clients)
     chunk_duration: float = Form(2.0),
     min_silence_ms: Optional[int] = Form(None),
     min_speech_ms: Optional[int] = Form(None),
@@ -460,11 +481,12 @@ async def align_audio_endpoint(
     """
     نقطة النهاية المتزامنة للمحاذاة المباشرة
     """
+    riwayah = resolve_riwayah(riwayah, legacy_riwayah)
     ayahs = []
     if ayahs_text and ayahs_text.strip():
         ayahs = [a.strip() for a in ayahs_text.strip().split("\n") if a.strip()]
     else:
-        ayahs = load_quran_surah_text(surah_id, riwaya)
+        ayahs = load_quran_surah_text(surah_id, riwayah)
         
     if not ayahs:
         raise HTTPException(status_code=400, detail="لم يتم العثور على نصوص الآيات المطلوبة للتزمين.")

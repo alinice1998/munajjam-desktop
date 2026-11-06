@@ -33,7 +33,7 @@ class AlignerApiService {
     required int surahId,
     required File audioFile,
     String method = 'hybrid',
-    String riwaya = 'hafsh',
+    String riwayah = 'hafs_an_asim',
     String? referenceText,
     double chunkDuration = 2.0,
     int minSilenceMs = 200,
@@ -45,7 +45,7 @@ class AlignerApiService {
     final request = http.MultipartRequest('POST', uri);
 
     request.fields['method'] = method;
-    request.fields['riwaya'] = riwaya;
+    request.fields['riwayah'] = riwayah;
     request.fields['chunk_duration'] = chunkDuration.toString();
     request.fields['min_silence_ms'] = minSilenceMs.toString();
     request.fields['min_speech_ms'] = minSpeechMs.toString();

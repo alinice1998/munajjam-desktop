@@ -300,11 +300,11 @@ class _BatchAlignmentModalState extends State<BatchAlignmentModal> {
 
           const SizedBox(height: 10),
 
-          // Row 2: Settings (Riwaya, Engine, Options)
+          // Row 2: Settings (Riwayah, Engine, Options)
           Row(
             textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
             children: [
-              // Riwaya
+              // Riwayah
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                 decoration: BoxDecoration(
@@ -314,7 +314,7 @@ class _BatchAlignmentModalState extends State<BatchAlignmentModal> {
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
-                    value: _batchService.riwaya,
+                    value: _batchService.riwayah,
                     isDense: true,
                     dropdownColor: AppColors.surfaceCard,
                     style: GoogleFonts.tajawal(
@@ -324,21 +324,21 @@ class _BatchAlignmentModalState extends State<BatchAlignmentModal> {
                     ),
                     items: [
                       DropdownMenuItem(
-                        value: 'hafsh',
+                        value: 'hafs_an_asim',
                         child: Text(
                           'رواية حفص عن عاصم',
                           style: GoogleFonts.tajawal(fontSize: 12, color: AppColors.textPrimary),
                         ),
                       ),
                       DropdownMenuItem(
-                        value: 'warsh',
+                        value: 'warsh_an_nafi',
                         child: Text(
                           'رواية ورش عن نافع',
                           style: GoogleFonts.tajawal(fontSize: 12, color: AppColors.textPrimary),
                         ),
                       ),
                     ],
-                    onChanged: isRunning ? null : (val) => val != null ? _batchService.setRiwaya(val) : null,
+                    onChanged: isRunning ? null : (val) => val != null ? _batchService.setRiwayah(val) : null,
                   ),
                 ),
               ),
