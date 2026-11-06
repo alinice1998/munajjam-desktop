@@ -1,5 +1,7 @@
 # مُنجّم | محطة التزمين القرآني الذكي (Munajjam Quran Alignment Workstation)
 
+[![Marqoom terminology v0.1](https://img.shields.io/badge/Marqoom-terminology%20v0.1-8c6a2c)](https://marqoom-specs.com/ar/docs/terms) [![Quranic terminology](https://github.com/alinice1998/munajjam-desktop/actions/workflows/terminology.yml/badge.svg)](https://github.com/alinice1998/munajjam-desktop/actions/workflows/terminology.yml)
+
 منظومة متطورة مفتوحة المصدر لتزمين ومحاذاة التلاوات القرآنية بدقة متناهية على مستوى الآيات والوقف والنَّفَس والكلمات، تجمع بين واجهة مكتبية تفاعلية حديثة مبنية بـ **Flutter** ومحرك ذكاء اصطناعي هجين فائق الدقة مبني بـ **Python** ونماذج **ONNX Runtime** المتسارعة بالـ GPU.
 
 ---
@@ -56,6 +58,21 @@ cd munajjam_desktop
 flutter pub get
 flutter run -d windows
 ```
+
+---
+
+## 🏷️ المصطلحات القرآنية
+
+يتبع مُنجّم [معيار المصطلحات القرآنية v0.1](https://marqoom-specs.com/ar/docs/terms) من مرقوم في أسماء الكود وفي ملفات JSON التي يصدّرها: توقيت الآية `AyahTiming` وتوقيت الكلمة `WordTiming`، والرواية `riwayah` برموز سجل القراءات (`hafs_an_asim` و`warsh_an_nafi`)، وتصنيف السور `makki` و`madani`. وتعرض الواجهة أسماء السور اللاتينية كما في سجل السور (`Fatihah` و`Baqarah`).
+
+تفحص الأسماءَ أداةُ [Quranic terminology lint](https://github.com/marqoom-specs/quranic-terminology-lint) قبل كل commit، وفي كل Pull Request عبر GitHub Actions. لتفعيلها عندك:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+ولمراجعة المشروع كاملًا: `pre-commit run quranic-terminology --all-files`. الاستثناءات وسبب كل منها في `.terminology.json`.
 
 ---
 
