@@ -4,7 +4,7 @@ enum AlignmentGranularity {
   word,
 }
 
-class WordSegment {
+class WordTiming {
   final String word;
   double start;
   double end;
@@ -13,7 +13,7 @@ class WordSegment {
   final bool isRepetition;
   final String? repetitionType;
 
-  WordSegment({
+  WordTiming({
     required this.word,
     required this.start,
     required this.end,
@@ -35,8 +35,8 @@ class WordSegment {
         if (repetitionType != null) 'repetition_type': repetitionType,
       };
 
-  factory WordSegment.fromJson(Map<String, dynamic> json) {
-    return WordSegment(
+  factory WordTiming.fromJson(Map<String, dynamic> json) {
+    return WordTiming(
       word: json['word'] ?? '',
       start: (json['start'] as num?)?.toDouble() ?? 0.0,
       end: (json['end'] as num?)?.toDouble() ?? 0.0,
@@ -47,7 +47,7 @@ class WordSegment {
     );
   }
 
-  WordSegment copyWith({
+  WordTiming copyWith({
     String? word,
     double? start,
     double? end,
@@ -56,7 +56,7 @@ class WordSegment {
     bool? isRepetition,
     String? repetitionType,
   }) {
-    return WordSegment(
+    return WordTiming(
       word: word ?? this.word,
       start: start ?? this.start,
       end: end ?? this.end,
@@ -74,7 +74,7 @@ class BreathGroup {
   double endTime;
   double duration;
   String text;
-  List<WordSegment> words;
+  List<WordTiming> words;
   List<int> ayahNumbers;
   double similarity;
   bool isRepetition;
@@ -114,7 +114,7 @@ class BreathGroup {
 
   factory BreathGroup.fromJson(Map<String, dynamic> json) {
     var rawWords = json['words'] as List? ?? [];
-    final parsedWords = rawWords.map((w) => WordSegment.fromJson(w as Map<String, dynamic>)).toList();
+    final parsedWords = rawWords.map((w) => WordTiming.fromJson(w as Map<String, dynamic>)).toList();
     final rawSim = (json['similarity'] as num?)?.toDouble() ?? (json['confidence'] as num?)?.toDouble();
     final computedSim = rawSim ??
         (parsedWords.isNotEmpty
@@ -142,7 +142,7 @@ class BreathGroup {
     double? endTime,
     double? duration,
     String? text,
-    List<WordSegment>? words,
+    List<WordTiming>? words,
     List<int>? ayahNumbers,
     double? similarity,
     bool? isRepetition,
@@ -165,15 +165,15 @@ class BreathGroup {
   }
 }
 
-class AyahSegment {
+class AyahTiming {
   final int ayahNumber;
   double start;
   double end;
   String text;
   double similarity;
-  List<WordSegment> words;
+  List<WordTiming> words;
 
-  AyahSegment({
+  AyahTiming({
     required this.ayahNumber,
     required this.start,
     required this.end,
@@ -196,16 +196,16 @@ class AyahSegment {
         'words': words.map((w) => w.toJson()).toList(),
       };
 
-  factory AyahSegment.fromJson(Map<String, dynamic> json) {
+  factory AyahTiming.fromJson(Map<String, dynamic> json) {
     var rawWords = json['words'] as List? ?? [];
-    final parsedWords = rawWords.map((w) => WordSegment.fromJson(w)).toList();
+    final parsedWords = rawWords.map((w) => WordTiming.fromJson(w)).toList();
     final rawSim = (json['similarity'] as num?)?.toDouble() ?? (json['confidence'] as num?)?.toDouble();
     final computedSim = rawSim ??
         (parsedWords.isNotEmpty
             ? (parsedWords.map((w) => w.confidence).reduce((a, b) => a + b) / parsedWords.length)
             : 1.0);
 
-    return AyahSegment(
+    return AyahTiming(
       ayahNumber: json['ayah_number'] ?? 1,
       start: (json['start'] as num?)?.toDouble() ?? (json['start_time'] as num?)?.toDouble() ?? 0.0,
       end: (json['end'] as num?)?.toDouble() ?? (json['end_time'] as num?)?.toDouble() ?? 0.0,
@@ -215,15 +215,15 @@ class AyahSegment {
     );
   }
 
-  AyahSegment copyWith({
+  AyahTiming copyWith({
     int? ayahNumber,
     double? start,
     double? end,
     String? text,
     double? similarity,
-    List<WordSegment>? words,
+    List<WordTiming>? words,
   }) {
-    return AyahSegment(
+    return AyahTiming(
       ayahNumber: ayahNumber ?? this.ayahNumber,
       start: start ?? this.start,
       end: end ?? this.end,

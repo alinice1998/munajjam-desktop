@@ -9,7 +9,7 @@ import '../services/quran_data_service.dart';
 class AlignmentProvider extends ChangeNotifier {
   int _selectedSurahId = 1;
   String _reciterName = '';
-  String _riwaya = 'hafsh';
+  String _riwayah = 'hafs_an_asim';
   AlignmentGranularity _activeGranularity = AlignmentGranularity.ayah;
 
   double _ayahReviewThreshold = 0.95;
@@ -86,9 +86,9 @@ class AlignmentProvider extends ChangeNotifier {
     }
   }
 
-  List<AyahSegment> _segments = [];
+  List<AyahTiming> _segments = [];
   List<BreathGroup> _breathGroups = [];
-  List<AyahSegment> _originalSegments = [];
+  List<AyahTiming> _originalSegments = [];
   List<BreathGroup> _originalBreathGroups = [];
 
   int? _currentSegmentIndex;
@@ -102,10 +102,10 @@ class AlignmentProvider extends ChangeNotifier {
   // Getters
   int get selectedSurahId => _selectedSurahId;
   String get reciterName => _reciterName;
-  String get riwaya => _riwaya;
+  String get riwayah => _riwayah;
   String get repetitionMode => _repetitionMode;
   AlignmentGranularity get activeGranularity => _activeGranularity;
-  List<AyahSegment> get segments => _segments;
+  List<AyahTiming> get segments => _segments;
   List<BreathGroup> get breathGroups => _breathGroups;
   int? get currentSegmentIndex => _currentSegmentIndex;
   int? get currentBreathIndex => _currentBreathIndex;
@@ -157,11 +157,11 @@ class AlignmentProvider extends ChangeNotifier {
     }
     for (final bg in _breathGroups) {
       if (bg.isRepetition) {
-        int? ayahNum;
+        int? ayahNumber;
         String aText = bg.text;
         for (final seg in _segments) {
           if (bg.startTime >= seg.start - 0.1 && bg.startTime <= seg.end + 0.1) {
-            ayahNum = seg.ayahNumber;
+            ayahNumber = seg.ayahNumber;
             aText = seg.text;
             break;
           }
@@ -172,7 +172,7 @@ class AlignmentProvider extends ChangeNotifier {
           endTime: bg.endTime,
           text: bg.text.isNotEmpty ? bg.text : 'سكتة #${bg.groupIndex}',
           ayahText: aText,
-          ayahNumber: ayahNum,
+          ayahNumber: ayahNumber,
           isWord: false,
           repetitionType: bg.repetitionType,
         ));
@@ -326,8 +326,8 @@ class AlignmentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setRiwaya(String riwaya) {
-    _riwaya = riwaya;
+  void setRiwayah(String riwayah) {
+    _riwayah = riwayah;
     notifyListeners();
   }
 
@@ -478,7 +478,7 @@ class AlignmentProvider extends ChangeNotifier {
 
   void _stepWordNavigation({required bool forward}) {
     final curSec = AudioService().currentSeconds;
-    final allWords = <({int ayahIdx, WordSegment word})>[];
+    final allWords = <({int ayahIdx, WordTiming word})>[];
     for (int a = 0; a < _segments.length; a++) {
       for (final w in _segments[a].words) {
         allWords.add((ayahIdx: a, word: w));
@@ -593,7 +593,7 @@ class AlignmentProvider extends ChangeNotifier {
   }
 
   void applyAlignmentResult({
-    required List<AyahSegment> ayahs,
+    required List<AyahTiming> ayahs,
     required List<BreathGroup> breaths,
     required int surahId,
     String? reciterName,
@@ -610,7 +610,7 @@ class AlignmentProvider extends ChangeNotifier {
     _localAudioPath = audioPath;
 
     // Merge Quran text
-    final quranText = await QuranDataService().getSurahAyahs(surahId, riwaya: _riwaya);
+    final quranText = await QuranDataService().getSurahAyahs(surahId, riwayah: _riwayah);
     _segments = QuranDataService().mergeQuranTextIntoSegments(ayahs, quranText);
 
     if (breaths.isNotEmpty) {
@@ -652,7 +652,7 @@ class AlignmentProvider extends ChangeNotifier {
 
     if (parsed == null) return false;
 
-    final ayahs = parsed['ayahs'] as List<AyahSegment>;
+    final ayahs = parsed['ayahs'] as List<AyahTiming>;
     final breaths = parsed['breathGroups'] as List<BreathGroup>;
     final surahId = parsed['surahId'] as int;
 
@@ -667,7 +667,7 @@ class AlignmentProvider extends ChangeNotifier {
     return true;
   }
 
-  void updateAyahSegment(int index, {double? start, double? end, bool syncLinked = true}) {
+  void updateAyahTiming(int index, {double? start, double? end, bool syncLinked = true}) {
     if (index < 0 || index >= _segments.length) return;
     final current = _segments[index];
     final oldStart = current.start;
@@ -677,7 +677,7 @@ class AlignmentProvider extends ChangeNotifier {
 
     if (updatedEnd <= updatedStart) return;
 
-    List<WordSegment> updatedWords = List<WordSegment>.from(current.words);
+    List<WordTiming> updatedWords = List<WordTiming>.from(current.words);
     if (syncLinked && updatedWords.isNotEmpty) {
       if (start != null) {
         updatedWords[0] = updatedWords[0].copyWith(start: updatedStart);
@@ -728,7 +728,7 @@ class AlignmentProvider extends ChangeNotifier {
 
     if (updatedEnd <= updatedStart) return;
 
-    List<WordSegment> updatedWords = List<WordSegment>.from(current.words);
+    List<WordTiming> updatedWords = List<WordTiming>.from(current.words);
     if (syncLinked && updatedWords.isNotEmpty) {
       if (start != null) {
         updatedWords[0] = updatedWords[0].copyWith(start: updatedStart);
@@ -750,10 +750,10 @@ class AlignmentProvider extends ChangeNotifier {
       for (int i = 0; i < _segments.length; i++) {
         final seg = _segments[i];
         if (start != null && (seg.start - oldStart).abs() < 0.15) {
-          updateAyahSegment(i, start: updatedStart, syncLinked: false);
+          updateAyahTiming(i, start: updatedStart, syncLinked: false);
         }
         if (end != null && (seg.end - oldEnd).abs() < 0.15) {
-          updateAyahSegment(i, end: updatedEnd, syncLinked: false);
+          updateAyahTiming(i, end: updatedEnd, syncLinked: false);
         }
       }
     }
@@ -762,7 +762,7 @@ class AlignmentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateWordSegment(int ayahIndex, int wordIndex, {double? start, double? end, bool syncLinked = true}) {
+  void updateWordTiming(int ayahIndex, int wordIndex, {double? start, double? end, bool syncLinked = true}) {
     if (ayahIndex < 0 || ayahIndex >= _segments.length) return;
     final ayah = _segments[ayahIndex];
     if (wordIndex < 0 || wordIndex >= ayah.words.length) return;
@@ -773,7 +773,7 @@ class AlignmentProvider extends ChangeNotifier {
 
     if (updatedEnd <= updatedStart) return;
 
-    final updatedWords = List<WordSegment>.from(ayah.words);
+    final updatedWords = List<WordTiming>.from(ayah.words);
     updatedWords[wordIndex] = word.copyWith(start: updatedStart, end: updatedEnd);
 
     double newAyahStart = ayah.start;
@@ -1024,8 +1024,8 @@ class AlignmentProvider extends ChangeNotifier {
         final prev = words[foundWordIdx];
         final next = words[foundWordIdx + 1];
         if (formattedTime > prev.start + 0.02 && formattedTime < next.end - 0.02) {
-          updateWordSegment(foundAyahIdx, foundWordIdx, end: formattedTime);
-          updateWordSegment(foundAyahIdx, foundWordIdx + 1, start: formattedTime);
+          updateWordTiming(foundAyahIdx, foundWordIdx, end: formattedTime);
+          updateWordTiming(foundAyahIdx, foundWordIdx + 1, start: formattedTime);
         }
       }
       _triggerSaveIndicator();

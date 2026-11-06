@@ -214,12 +214,12 @@ class ZipformerNeuralAligner:
         """
         if not token_events:
             return {
-                "has_istiadha": False,
+                "has_istiadhah": False,
                 "has_basmalah": False,
                 "has_ameen": False,
                 "surah_start_token_idx": 0,
                 "surah_end_token_idx": 0,
-                "istiadha_end_idx": 0,
+                "istiadhah_end_idx": 0,
                 "basmalah_start_idx": 0,
                 "basmalah_end_idx": 0,
                 "ameen_start_idx": 0
@@ -229,7 +229,7 @@ class ZipformerNeuralAligner:
         head_chars = raw_chars[:min(60, len(raw_chars))]
         head_text = "".join(head_chars)
         
-        has_istiadha = any(p in head_text for p in ["اعود", "اعوذ", "شيطان", "شيط", "رجيم", "رجي"])
+        has_istiadhah = any(p in head_text for p in ["اعود", "اعوذ", "شيطان", "شيط", "رجيم", "رجي"])
         has_basmalah = ("بسم" in head_text and any(p in head_text for p in ["رحمان", "رحمن", "رحيم", "رحي"]))
         
         # 1. تحديد موقع بداية ونهاية البسملة
@@ -252,15 +252,15 @@ class ZipformerNeuralAligner:
                     break
 
         # 2. تحديد موقع نهاية الاستعاذة
-        istiadha_end_idx = 0
-        if has_istiadha:
+        istiadhah_end_idx = 0
+        if has_istiadhah:
             if has_basmalah and basmalah_start_idx > 0:
-                istiadha_end_idx = basmalah_start_idx
+                istiadhah_end_idx = basmalah_start_idx
             else:
                 for k in range(min(30, len(token_events))):
                     sub = "".join(raw_chars[:k+1])
                     if any(p in sub for p in ["رجيم", "رجي", "شيطان"]):
-                        istiadha_end_idx = k + 1
+                        istiadhah_end_idx = k + 1
 
         # 3. تحديد موقع بداية آمين في الخاتمة (خاص بسورة الفاتحة فقط surah_id == 1)
         ameen_start_idx = len(token_events)
@@ -287,25 +287,25 @@ class ZipformerNeuralAligner:
         # 4. تحديد نطاق توكنات السورة الصافية
         if surah_id == 1:
             # الفاتحة برواية حفص: البسملة هي الآية رقم 1
-            surah_start_token_idx = basmalah_start_idx if has_basmalah else istiadha_end_idx
+            surah_start_token_idx = basmalah_start_idx if has_basmalah else istiadhah_end_idx
         else:
             # بقية السور 2..114: السورة تبدأ بعد البسملة والاستعاذة
             if has_basmalah:
                 surah_start_token_idx = basmalah_end_idx
-            elif has_istiadha:
-                surah_start_token_idx = istiadha_end_idx
+            elif has_istiadhah:
+                surah_start_token_idx = istiadhah_end_idx
             else:
                 surah_start_token_idx = 0
 
         surah_end_token_idx = ameen_start_idx if (surah_id == 1 and has_ameen) else len(token_events)
 
         return {
-            "has_istiadha": has_istiadha,
+            "has_istiadhah": has_istiadhah,
             "has_basmalah": has_basmalah,
             "has_ameen": has_ameen,
             "surah_start_token_idx": surah_start_token_idx,
             "surah_end_token_idx": surah_end_token_idx,
-            "istiadha_end_idx": istiadha_end_idx,
+            "istiadhah_end_idx": istiadhah_end_idx,
             "basmalah_start_idx": basmalah_start_idx,
             "basmalah_end_idx": basmalah_end_idx,
             "ameen_start_idx": ameen_start_idx
@@ -450,7 +450,7 @@ class ZipformerNeuralAligner:
             "surah_id": surah_id,
             "total_duration": total_dur,
             "detected_phrases": {
-                "istiadha": special["has_istiadha"],
+                "istiadhah": special["has_istiadhah"],
                 "basmalah": special["has_basmalah"],
                 "ameen": special["has_ameen"]
             },

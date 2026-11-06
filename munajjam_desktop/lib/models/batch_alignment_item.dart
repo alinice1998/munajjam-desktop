@@ -1,5 +1,6 @@
 import 'package:path/path.dart' as p;
 import 'surah_model.dart';
+import 'surah_spellings.dart';
 
 enum BatchItemStatus {
   pending,    // بانتظار بدء التزمين
@@ -179,12 +180,12 @@ class SurahFileNameDetector {
     final cleanName = fileName.trim();
 
     // 1. فحص وجود "سورة" صريحة متبوعة برقم (مثل: "Surah_018", "surah-1", "سورة 112")
-    final explicitSurahNumMatch = RegExp(
-      r'(?:surah|sura|سورة|سوره)[\s_\-]*0*([1-9]\d{0,2})\b',
+    final explicitSurahNumberMatch = RegExp(
+      r'(?:surah|sura|سورة|سوره)[\s_\-]*0*([1-9]\d{0,2})\b', // terminology: ignore (spellings found in file names)
       caseSensitive: false,
     ).firstMatch(cleanName);
-    if (explicitSurahNumMatch != null) {
-      final id = int.tryParse(explicitSurahNumMatch.group(1)!);
+    if (explicitSurahNumberMatch != null) {
+      final id = int.tryParse(explicitSurahNumberMatch.group(1)!);
       if (id != null && id >= 1 && id <= 114) {
         final surah = getSurahById(id);
         return (surah.id, surah.nameArabic);
@@ -272,11 +273,11 @@ class SurahFileNameDetector {
       }
     }
 
-    // 7. مطابقة الاسم الإنجليزي أو اللاتيني (مثل: Ya-Sin, Ta-Ha, Sad, Qaf, Al-Baqarah)
+    // 7. مطابقة الاسم الإنجليزي أو الكتابة اللاتينية الشائعة في أسماء الملفات (surah_spellings.dart)
     final normLatinInput = normalizeLatin(cleanName);
     for (final surah in allSurahsList) {
       final normEng = normalizeLatin(surah.nameEnglish);
-      final normTrans = normalizeLatin(surah.nameTransliteration);
+      final normTrans = normalizeLatin(surahLatinSpellings[surah.id] ?? surah.nameTransliteration);
       if (normEng.length >= 3 && normLatinInput.contains(normEng)) {
         return (surah.id, surah.nameArabic);
       }
@@ -292,8 +293,8 @@ class SurahFileNameDetector {
         .where((t) => t.isNotEmpty)
         .toList();
     for (final lt in latinTokens) {
-      if (lt == 'taha' || lt == 'ta-ha') return (20, getSurahById(20).nameArabic);
-      if (lt == 'yasin' || lt == 'yaseen' || lt == 'ya-sin') return (36, getSurahById(36).nameArabic);
+      if (lt == 'taha') return (20, getSurahById(20).nameArabic);
+      if (lt == 'yasin' || lt == 'yaseen') return (36, getSurahById(36).nameArabic);
       if (lt == 'sad') return (38, getSurahById(38).nameArabic);
       if (lt == 'qaf') return (50, getSurahById(50).nameArabic);
     }

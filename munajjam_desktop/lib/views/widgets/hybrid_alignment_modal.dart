@@ -27,7 +27,7 @@ class _HybridAlignmentModalState extends State<HybridAlignmentModal> {
   File? _selectedJsonFile;
   int _selectedSurahId = 1;
   String? _autoDetectedSurahName;
-  String _selectedRiwaya = 'hafsh';
+  String _selectedRiwayah = 'hafs_an_asim';
   String _selectedMethod = 'hybrid'; // hybrid or zipformer
   double _chunkDuration = 2.0; // Customizable streaming chunk duration
   int _minSilenceMs = 200; // 25ms - 1000ms
@@ -44,7 +44,7 @@ class _HybridAlignmentModalState extends State<HybridAlignmentModal> {
     super.initState();
     final alignProvider = context.read<AlignmentProvider>();
     _selectedSurahId = alignProvider.selectedSurahId;
-    _selectedRiwaya = alignProvider.riwaya;
+    _selectedRiwayah = alignProvider.riwayah;
 
     if (alignProvider.localAudioPath != null && File(alignProvider.localAudioPath!).existsSync()) {
       _selectedAudioFile = File(alignProvider.localAudioPath!);
@@ -162,7 +162,7 @@ class _HybridAlignmentModalState extends State<HybridAlignmentModal> {
         surahId: _selectedSurahId,
         audioFile: _selectedAudioFile!,
         method: _selectedMethod,
-        riwaya: _selectedRiwaya,
+        riwayah: _selectedRiwayah,
         chunkDuration: _chunkDuration,
         minSilenceMs: _minSilenceMs,
         minSpeechMs: _minSpeechMs,
@@ -397,7 +397,7 @@ class _HybridAlignmentModalState extends State<HybridAlignmentModal> {
 
                     const SizedBox(height: 14),
 
-                    // 2. Surah & Riwaya Selectors
+                    // 2. Surah & Riwayah Selectors
                     Row(
                       children: [
                         // Surah Dropdown
@@ -467,7 +467,7 @@ class _HybridAlignmentModalState extends State<HybridAlignmentModal> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // Riwaya Dropdown
+                        // Riwayah Dropdown
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,7 +483,7 @@ class _HybridAlignmentModalState extends State<HybridAlignmentModal> {
                                 ),
                                 child: DropdownButtonHideUnderline(
                                   child: DropdownButton<String>(
-                                    value: _selectedRiwaya,
+                                    value: _selectedRiwayah,
                                     isExpanded: true,
                                     dropdownColor: AppColors.surfaceCard,
                                     style: GoogleFonts.tajawal(
@@ -493,14 +493,14 @@ class _HybridAlignmentModalState extends State<HybridAlignmentModal> {
                                     ),
                                     items: [
                                       DropdownMenuItem(
-                                        value: 'hafsh',
+                                        value: 'hafs_an_asim',
                                         child: Text(
                                           'حفص عن عاصم',
                                           style: GoogleFonts.tajawal(fontSize: 13, color: AppColors.textPrimary),
                                         ),
                                       ),
                                       DropdownMenuItem(
-                                        value: 'warsh',
+                                        value: 'warsh_an_nafi',
                                         child: Text(
                                           'ورش عن نافع',
                                           style: GoogleFonts.tajawal(fontSize: 13, color: AppColors.textPrimary),
@@ -508,7 +508,7 @@ class _HybridAlignmentModalState extends State<HybridAlignmentModal> {
                                       ),
                                     ],
                                     onChanged: _isAligning ? null : (val) {
-                                      if (val != null) setState(() => _selectedRiwaya = val);
+                                      if (val != null) setState(() => _selectedRiwayah = val);
                                     },
                                   ),
                                 ),

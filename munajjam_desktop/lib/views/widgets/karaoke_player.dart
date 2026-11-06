@@ -41,7 +41,7 @@ class KaraokePlayer extends StatelessWidget {
           final currentTime = pos.inMilliseconds / 1000.0;
 
           // 1. Precise Ayah Segment Matching Algorithm (identical to QAPlayer.tsx)
-          AyahSegment? currentSegment;
+          AyahTiming? currentSegment;
 
           final selectedAyahIdx = alignProvider.currentSegmentIndex;
           if (selectedAyahIdx != null && selectedAyahIdx >= 0 && selectedAyahIdx < segments.length) {
@@ -221,7 +221,7 @@ class KaraokePlayer extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              // Main Quran Display Box with Fluid Word-by-Word Glowing Highlight
+              // Main Quran Display Box with Fluid Per-Word Glowing Highlight
               Container(
                 constraints: const BoxConstraints(minHeight: 110),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),

@@ -419,7 +419,7 @@ class HybridQuranAligner:
             "surah_id": surah_id,
             "total_duration": total_dur,
             "detected_phrases": {
-                "istiadha": special.get("has_istiadha", False),
+                "istiadhah": special.get("has_istiadhah", False),
                 "basmalah": special.get("has_basmalah", False),
                 "ameen": special.get("has_ameen", False)
             },
@@ -659,7 +659,7 @@ class HybridQuranAligner:
 
             # محاذاة مقطع النَّفَس قسرياً بدقة الإطار الواحد عبر Wav2Vec2
             segment_alignments = self.wav2vec2.align_segment(
-                audio_segment=chunk_audio,
+                audio_chunk=chunk_audio,
                 words=group_words_raw,
                 sr=sr
             )
@@ -740,13 +740,13 @@ class HybridQuranAligner:
         )
 
         # بناء خريطة ربط الفهرس الأصلي لكل كلمة برقم آيتها
-        word_idx_to_ayah_num = {}
+        word_idx_to_ayah_number = {}
         curr_w = 0
         for a_info in original_ayahs:
             a_num = a_info["ayah_number"]
             a_count = len(a_info.get("words", []))
             for wi in range(curr_w, curr_w + a_count):
-                word_idx_to_ayah_num[wi] = a_num
+                word_idx_to_ayah_number[wi] = a_num
             curr_w += a_count
 
         # 1. إعادة بناء مقاطع النَّفَس النهائية المحدثة مع وسوم التكرار والتحكم بموضع الضم (next / prev)
@@ -759,7 +759,7 @@ class HybridQuranAligner:
                 g_words_aligned = [dict(refined_alignments[i]) for i in g_indices if i < len(refined_alignments) and refined_alignments[i]]
                 for idx_in_g, global_idx in enumerate(g_indices):
                     if idx_in_g < len(g_words_aligned):
-                        g_words_aligned[idx_in_g]["ayah_number"] = word_idx_to_ayah_num.get(global_idx)
+                        g_words_aligned[idx_in_g]["ayah_number"] = word_idx_to_ayah_number.get(global_idx)
             else:
                 g_words_aligned = [dict(w) for w in group.get("words", [])]
 
@@ -1129,7 +1129,7 @@ class HybridQuranAligner:
                 is_full = (max_overlap_len >= len(curr_clean) - 3)
                 repetition_results.append({
                     "is_repetition": True,
-                    "repetition_type": "verse_retake" if is_full else "waqf_ibtida",
+                    "repetition_type": "ayah_retake" if is_full else "waqf_ibtida",
                     "overlap_chars": max_overlap_len,
                     "overlap_text": best_overlap_str
                 })

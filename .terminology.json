@@ -1,0 +1,17 @@
+{
+  "exclude": [
+    "data/*.js",
+    "munajjam_desktop/assets/data/*.js",
+    "munajjam_desktop/lib/models/surah_spellings.dart"
+  ],
+  "_exclude": "The .js files are JavaScript copies of the JSON datasets beside them, and the check reads only the keys of JSON data. surah_spellings.dart lists the Latin spellings people use in file names and searches (Al-Fatihah, An-Nas), kept for lookup.",
+  "ignore_words": ["wasl"],
+  "_ignore_words": "wasl here is joining two ayahs in one breath (الوصل), not hamzat al-wasl.",
+  "external_names": [
+    "\\bAudioSegment\\b",
+    "'Basmala'",
+    "\"Isti'adha\"",
+    "^- tajweed$"
+  ],
+  "_external_names": "AudioSegment is pydub's class. Basmala and Isti'adha are special_type values in the imported segments files. tajweed is a Hugging Face model tag."
+}

@@ -7,16 +7,16 @@ class QuranDataService {
   factory QuranDataService() => _instance;
   QuranDataService._internal();
 
-  Map<String, List<String>> _hafshData = {};
+  Map<String, List<String>> _hafsData = {};
   Map<String, List<String>> _warshData = {};
   bool _loaded = false;
 
   Future<void> loadData() async {
     if (_loaded) return;
     try {
-      final hafshString = await rootBundle.loadString('assets/data/quran_hafsh.json');
-      final Map<String, dynamic> hafshJson = jsonDecode(hafshString);
-      _hafshData = hafshJson.map((k, v) => MapEntry(k, (v as List).map((e) => e.toString()).toList()));
+      final hafsString = await rootBundle.loadString('assets/data/quran_hafsh.json');
+      final Map<String, dynamic> hafsJson = jsonDecode(hafsString);
+      _hafsData = hafsJson.map((k, v) => MapEntry(k, (v as List).map((e) => e.toString()).toList()));
     } catch (_) {}
 
     try {
@@ -28,22 +28,22 @@ class QuranDataService {
     _loaded = true;
   }
 
-  Future<List<String>> getSurahAyahs(int surahId, {String riwaya = 'hafsh'}) async {
+  Future<List<String>> getSurahAyahs(int surahId, {String riwayah = 'hafs_an_asim'}) async {
     await loadData();
     final key = surahId.toString();
-    if (riwaya == 'warsh' && _warshData.containsKey(key)) {
+    if (riwayah == 'warsh_an_nafi' && _warshData.containsKey(key)) {
       return _warshData[key]!;
     }
-    if (_hafshData.containsKey(key)) {
-      return _hafshData[key]!;
+    if (_hafsData.containsKey(key)) {
+      return _hafsData[key]!;
     }
     return [];
   }
 
-  List<AyahSegment> mergeQuranTextIntoSegments(List<AyahSegment> segments, List<String> quranText) {
+  List<AyahTiming> mergeQuranTextIntoSegments(List<AyahTiming> segments, List<String> quranText) {
     if (quranText.isEmpty) return segments;
 
-    final result = <AyahSegment>[];
+    final result = <AyahTiming>[];
     for (int i = 0; i < segments.length; i++) {
       final seg = segments[i];
       final text = i < quranText.length ? quranText[i] : seg.text;
@@ -62,8 +62,8 @@ class QuranDataService {
       // 1. صيغة segments (مثل ملف tmpdve8r7_6.json أو ملفات Ground Truth)
       if (data.containsKey('segments') && data['segments'] is List) {
         final segmentsList = data['segments'] as List;
-        final Map<int, List<WordSegment>> ayahWordsMap = {};
-        final Map<String, List<WordSegment>> splitGroupMap = {};
+        final Map<int, List<WordTiming>> ayahWordsMap = {};
+        final Map<String, List<WordTiming>> splitGroupMap = {};
         int detectedSurahId = defaultSurahId;
 
         for (final item in segmentsList) {
@@ -78,38 +78,38 @@ class QuranDataService {
 
           if (matchedText.isEmpty) continue;
 
-          int ayahNum = 1;
+          int ayahNumber = 1;
           if (refFrom.isNotEmpty && refFrom.contains(':')) {
             final parts = refFrom.split(':');
             if (parts.length >= 2) {
               detectedSurahId = int.tryParse(parts[0]) ?? detectedSurahId;
-              ayahNum = int.tryParse(parts[1]) ?? 1;
+              ayahNumber = int.tryParse(parts[1]) ?? 1;
             }
           } else if (specialType == 'Basmala') {
-            ayahNum = 1;
+            ayahNumber = 1;
           } else if (specialType == "Isti'adha") {
             continue;
           }
 
           final isRep = s['has_repeated_words'] == true || s['is_repetition'] == true;
-          final wordSeg = WordSegment(
+          final wordSeg = WordTiming(
             word: matchedText,
             start: timeFrom,
             end: timeTo,
-            ayahNumber: ayahNum,
+            ayahNumber: ayahNumber,
             confidence: (s['confidence'] as num?)?.toDouble() ?? 1.0,
             isRepetition: isRep,
             repetitionType: isRep ? (s['repetition_type'] ?? 'waqf_ibtida') : null,
           );
 
-          ayahWordsMap.putIfAbsent(ayahNum, () => []).add(wordSeg);
+          ayahWordsMap.putIfAbsent(ayahNumber, () => []).add(wordSeg);
 
           if (splitGroupId != null && splitGroupId.isNotEmpty) {
             splitGroupMap.putIfAbsent(splitGroupId, () => []).add(wordSeg);
           }
         }
 
-        final ayahs = <AyahSegment>[];
+        final ayahs = <AyahTiming>[];
         final sortedAyahKeys = ayahWordsMap.keys.toList()..sort();
         for (final aNum in sortedAyahKeys) {
           final wList = ayahWordsMap[aNum]!;
@@ -117,7 +117,7 @@ class QuranDataService {
           final avgConf = wList.isNotEmpty
               ? wList.map((w) => w.confidence).reduce((a, b) => a + b) / wList.length
               : 1.0;
-          ayahs.add(AyahSegment(
+          ayahs.add(AyahTiming(
             ayahNumber: aNum,
             start: wList.first.start,
             end: wList.last.end,
@@ -176,7 +176,7 @@ class QuranDataService {
       final surahId = (data['surah_id'] as num?)?.toInt() ?? defaultSurahId;
 
       if (rawAyahs != null) {
-        final ayahs = rawAyahs.map((a) => AyahSegment.fromJson(Map<String, dynamic>.from(a as Map))).toList();
+        final ayahs = rawAyahs.map((a) => AyahTiming.fromJson(Map<String, dynamic>.from(a as Map))).toList();
         final breaths = rawBreaths != null
             ? rawBreaths.map((b) => BreathGroup.fromJson(Map<String, dynamic>.from(b as Map))).toList()
             : <BreathGroup>[];

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/localization/app_locale.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/surah_model.dart';
+import '../../models/surah_spellings.dart';
 import '../../providers/alignment_provider.dart';
 
 class SurahSelectorModal extends StatefulWidget {
@@ -29,7 +30,8 @@ class _SurahSelectorModalState extends State<SurahSelectorModal> {
       return s.id.toString() == q ||
           s.nameArabic.contains(q) ||
           s.nameEnglish.toLowerCase().contains(q) ||
-          s.nameTransliteration.toLowerCase().contains(q);
+          s.nameTransliteration.toLowerCase().contains(q) ||
+          (surahLatinSpellings[s.id]?.toLowerCase().contains(q) ?? false);
     }).toList();
 
     return Dialog(
@@ -140,7 +142,7 @@ class _SurahSelectorModalState extends State<SurahSelectorModal> {
                                   ),
                                 ),
                                 Text(
-                                  '${surah.nameTransliteration} • ${surah.ayahCount} آيات • ${surah.isMeccan ? 'مكية' : 'مدنية'}',
+                                  '${surah.nameTransliteration} • ${surah.ayahCount} آيات • ${surah.isMakki ? 'مكية' : 'مدنية'}',
                                   style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
                                 ),
                               ],

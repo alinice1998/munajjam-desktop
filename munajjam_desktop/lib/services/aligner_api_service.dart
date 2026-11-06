@@ -8,7 +8,7 @@ class AlignmentJobStatus {
   final String status;
   final int progress;
   final String message;
-  final List<AyahSegment>? data;
+  final List<AyahTiming>? data;
   final List<BreathGroup>? breathGroups;
 
   AlignmentJobStatus({
@@ -33,7 +33,7 @@ class AlignerApiService {
     required int surahId,
     required File audioFile,
     String method = 'hybrid',
-    String riwaya = 'hafsh',
+    String riwayah = 'hafs_an_asim',
     String? referenceText,
     double chunkDuration = 2.0,
     int minSilenceMs = 200,
@@ -45,7 +45,7 @@ class AlignerApiService {
     final request = http.MultipartRequest('POST', uri);
 
     request.fields['method'] = method;
-    request.fields['riwaya'] = riwaya;
+    request.fields['riwayah'] = riwayah;
     request.fields['chunk_duration'] = chunkDuration.toString();
     request.fields['min_silence_ms'] = minSilenceMs.toString();
     request.fields['min_speech_ms'] = minSpeechMs.toString();
@@ -82,10 +82,10 @@ class AlignerApiService {
     final progress = (json['progress'] as num?)?.toInt() ?? 0;
     final message = json['message'] ?? '';
 
-    List<AyahSegment>? ayahs;
+    List<AyahTiming>? ayahs;
     if (json['data'] != null) {
       final list = json['data'] as List;
-      ayahs = list.map((item) => AyahSegment.fromJson(item)).toList();
+      ayahs = list.map((item) => AyahTiming.fromJson(item)).toList();
     }
 
     List<BreathGroup>? breaths;
