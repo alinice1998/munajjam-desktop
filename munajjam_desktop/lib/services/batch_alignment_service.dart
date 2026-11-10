@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'quran_metadata.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -338,15 +339,11 @@ class BatchAlignmentService extends ChangeNotifier {
     }
 
     final exportData = {
-      'surah_id': item.surahId,
+      ...QuranMetadata.exportAlignment(riwaya: _riwaya,
+        surahNumber: item.surahId, ayahs: mergedAyahs, breaths: breaths),
       'surah_name': item.surahName,
       'audio_file': item.fileName,
-      'riwaya': _riwaya,
       'method': _method,
-      'total_ayahs': mergedAyahs.length,
-      'total_breath_groups': breaths.length,
-      'ayahs': mergedAyahs.map((s) => s.toJson()).toList(),
-      'breath_groups': breaths.map((b) => b.toJson()).toList(),
     };
 
     final jsonContent = const JsonEncoder.withIndent('  ').convert(exportData);
@@ -373,7 +370,7 @@ class BatchAlignmentService extends ChangeNotifier {
       final manifestData = {
         'title': 'Munajjam Khatmah Alignment Manifest',
         'generated_at': DateTime.now().toIso8601String(),
-        'riwaya': _riwaya,
+        ...QuranMetadata.describe(_riwaya),
         'method': _method,
         'total_files': _items.length,
         'completed': completedCount,
@@ -381,7 +378,7 @@ class BatchAlignmentService extends ChangeNotifier {
         'errors': errorCount,
         'total_elapsed_seconds': _totalElapsed.inSeconds,
         'items': _items.map((i) => {
-              'surah_id': i.surahId,
+              'surah_number': i.surahId,
               'surah_name': i.surahName,
               'file_name': i.fileName,
               'status': i.status.name,

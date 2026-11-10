@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'quran_metadata.dart';
+
 import 'package:flutter/services.dart';
 
 import '../models/alignment_models.dart';
@@ -44,8 +46,8 @@ class QuranDataService {
   }) async {
     await loadData();
     final key = surahId.toString();
-    if (riwaya == 'warsh' && _warshData.containsKey(key)) {
-      return _warshData[key]!;
+    if (QuranMetadata.legacyRiwaya(riwaya) == 'warsh') {
+      return _warshData[key] ?? [];
     }
     if (_hafshData.containsKey(key)) {
       return _hafshData[key]!;
@@ -80,6 +82,7 @@ class QuranDataService {
       final dynamic decoded = jsonDecode(jsonString);
       if (decoded is! Map<String, dynamic>) return null;
       final data = decoded;
+      final importedRiwaya = QuranMetadata.importedRiwaya(data);
 
       // 1. صيغة segments (مثل ملف tmpdve8r7_6.json أو ملفات Ground Truth)
       if (data.containsKey('segments') && data['segments'] is List) {
@@ -194,6 +197,7 @@ class QuranDataService {
 
         return {
           'surahId': detectedSurahId,
+          'riwaya': importedRiwaya,
           'ayahs': ayahs,
           'breathGroups': breaths,
         };
@@ -202,7 +206,9 @@ class QuranDataService {
       // 2. صيغة Munajjam الرسمية أو صيغة الخادم ('ayahs' أو 'data')
       final rawAyahs = (data['ayahs'] ?? data['data']) as List?;
       final rawBreaths = (data['breath_groups'] ?? data['breaths']) as List?;
-      final surahId = (data['surah_id'] as num?)?.toInt() ?? defaultSurahId;
+      final surahId =
+          ((data['surah_number'] ?? data['surah_id']) as num?)?.toInt() ??
+          defaultSurahId;
 
       if (rawAyahs != null) {
         final ayahs = rawAyahs
@@ -219,7 +225,12 @@ class QuranDataService {
                   )
                   .toList()
             : <BreathGroup>[];
-        return {'surahId': surahId, 'ayahs': ayahs, 'breathGroups': breaths};
+        return {
+          'surahId': surahId,
+          'riwaya': importedRiwaya,
+          'ayahs': ayahs,
+          'breathGroups': breaths,
+        };
       }
 
       return null;

@@ -1,0 +1,142 @@
+{
+  "riwayah": "hafs_an_asim",
+  "ayah_numbering_system": "kufi",
+  "time_unit": "second",
+  "time_origin": "start_of_audio_file",
+  "word_segmentation": "Aligned spoken segments in chronological order; may contain repetition or multiple written words. Array indexes are not Quran word positions. Basmalah follows the supplied text.",
+  "format_version": 2,
+  "surah_number": 1,
+  "total_ayahs": 7,
+  "total_breath_groups": 7,
+  "ayahs": [
+    {
+      "ayah_number": 1,
+      "start": 0.0,
+      "end": 2.0,
+      "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
+      "words": []
+    },
+    {
+      "ayah_number": 2,
+      "start": 2.0,
+      "end": 4.0,
+      "text": "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ",
+      "words": []
+    },
+    {
+      "ayah_number": 3,
+      "start": 4.0,
+      "end": 6.0,
+      "text": "ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
+      "words": []
+    },
+    {
+      "ayah_number": 4,
+      "start": 6.0,
+      "end": 8.0,
+      "text": "مَـٰلِكِ يَوْمِ ٱلدِّينِ",
+      "words": []
+    },
+    {
+      "ayah_number": 5,
+      "start": 8.0,
+      "end": 10.0,
+      "text": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
+      "words": []
+    },
+    {
+      "ayah_number": 6,
+      "start": 10.0,
+      "end": 12.0,
+      "text": "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ",
+      "words": []
+    },
+    {
+      "ayah_number": 7,
+      "start": 12.0,
+      "end": 14.0,
+      "text": "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
+      "words": []
+    }
+  ],
+  "breath_groups": [
+    {
+      "group_index": 1,
+      "start_time": 0.0,
+      "end_time": 2.0,
+      "duration": 2.0,
+      "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
+      "words": [],
+      "ayah_numbers": [
+        1
+      ]
+    },
+    {
+      "group_index": 2,
+      "start_time": 2.0,
+      "end_time": 4.0,
+      "duration": 2.0,
+      "text": "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ",
+      "words": [],
+      "ayah_numbers": [
+        2
+      ]
+    },
+    {
+      "group_index": 3,
+      "start_time": 4.0,
+      "end_time": 6.0,
+      "duration": 2.0,
+      "text": "ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
+      "words": [],
+      "ayah_numbers": [
+        3
+      ]
+    },
+    {
+      "group_index": 4,
+      "start_time": 6.0,
+      "end_time": 8.0,
+      "duration": 2.0,
+      "text": "مَـٰلِكِ يَوْمِ ٱلدِّينِ",
+      "words": [],
+      "ayah_numbers": [
+        4
+      ]
+    },
+    {
+      "group_index": 5,
+      "start_time": 8.0,
+      "end_time": 10.0,
+      "duration": 2.0,
+      "text": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
+      "words": [],
+      "ayah_numbers": [
+        5
+      ]
+    },
+    {
+      "group_index": 6,
+      "start_time": 10.0,
+      "end_time": 12.0,
+      "duration": 2.0,
+      "text": "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ",
+      "words": [],
+      "ayah_numbers": [
+        6
+      ]
+    },
+    {
+      "group_index": 7,
+      "start_time": 12.0,
+      "end_time": 14.0,
+      "duration": 2.0,
+      "text": "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
+      "words": [],
+      "ayah_numbers": [
+        7
+      ]
+    }
+  ],
+  "surah_name": "الفاتحة"
+}

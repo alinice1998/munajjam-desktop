@@ -61,6 +61,7 @@ Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignorever
 ; 2. Python Backend & Engine Scripts
 Source: "..\munajjam_server.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\neural_aligner.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\quran_metadata.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\start_server_gpu1.bat"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "..\ffmpeg.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion

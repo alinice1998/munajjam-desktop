@@ -6,11 +6,13 @@ import 'package:flutter/foundation.dart';
 import '../models/alignment_models.dart';
 import '../models/surah_model.dart';
 import '../services/quran_data_service.dart';
+import '../services/quran_metadata.dart';
 
 class AlignmentProvider extends ChangeNotifier {
   int _selectedSurahId = 1;
   String _reciterName = '';
   String _riwaya = 'hafsh';
+  String? _alignmentRiwaya;
   AlignmentGranularity _activeGranularity = AlignmentGranularity.ayah;
 
   List<AyahSegment> _segments = [];
@@ -533,7 +535,9 @@ class AlignmentProvider extends ChangeNotifier {
     required int surahId,
     String? reciterName,
     String? audioPath,
+    bool preserveText = false,
   }) async {
+    _alignmentRiwaya = _riwaya;
     _selectedSurahId = surahId;
     if (reciterName != null && reciterName.trim().isNotEmpty) {
       _reciterName = reciterName.trim();
@@ -549,7 +553,9 @@ class AlignmentProvider extends ChangeNotifier {
       surahId,
       riwaya: _riwaya,
     );
-    _segments = QuranDataService().mergeQuranTextIntoSegments(ayahs, quranText);
+    _segments = preserveText
+        ? ayahs
+        : QuranDataService().mergeQuranTextIntoSegments(ayahs, quranText);
 
     if (breaths.isNotEmpty) {
       _breathGroups = breaths;
@@ -591,6 +597,8 @@ class AlignmentProvider extends ChangeNotifier {
     );
 
     if (parsed == null) return false;
+    final importedRiwaya = parsed['riwaya'] as String?;
+    if (importedRiwaya != null) _riwaya = importedRiwaya;
 
     final ayahs = parsed['ayahs'] as List<AyahSegment>;
     final breaths = parsed['breathGroups'] as List<BreathGroup>;
@@ -602,6 +610,7 @@ class AlignmentProvider extends ChangeNotifier {
       surahId: surahId,
       reciterName: _reciterName.isNotEmpty ? _reciterName : null,
       audioPath: audioPath ?? _localAudioPath,
+      preserveText: true,
     );
 
     return true;
@@ -1139,15 +1148,16 @@ class AlignmentProvider extends ChangeNotifier {
 
   String generateExportJson() {
     final exportData = {
-      'surah_id': _selectedSurahId,
+      ...QuranMetadata.exportAlignment(
+        riwaya: _alignmentRiwaya ?? _riwaya,
+        surahNumber: _selectedSurahId,
+        ayahs: _segments,
+        breaths: _breathGroups,
+      ),
       'surah_name': currentSurah.nameArabic,
       if (_reciterName.isNotEmpty) 'reciter': _reciterName,
       if (_localAudioPath != null)
         'audio_file': _localAudioPath!.split(RegExp(r'[\\/]')).last,
-      'total_ayahs': _segments.length,
-      'total_breath_groups': _breathGroups.length,
-      'ayahs': _segments.map((s) => s.toJson()).toList(),
-      'breath_groups': _breathGroups.map((b) => b.toJson()).toList(),
     };
     return const JsonEncoder.withIndent('  ').convert(exportData);
   }

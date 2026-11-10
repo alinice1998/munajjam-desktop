@@ -1,0 +1,56 @@
+{
+  "_comment": "Marqoom v0.1 vocabulary; data check v0.5.0. Source datasets remain unchanged; published exports carry their own metadata. Naming-only scan is optional during legacy migration.",
+  "data": {
+    "publishes": [
+      "examples/exports/*.json",
+      "scratch/marqoom-exports/*.json"
+    ],
+    "files": {
+      "data/quran_hafsh.json": {
+        "riwayah": "hafs_an_asim",
+        "ayah_numbering_system": "kufi",
+        "word_segmentation": "Bundled text split on whitespace; basmalah is part of the first ayah where present. Audio segment order is not a text word position."
+      },
+      "data/quran_warsh.json": {
+        "riwayah": "warsh_an_nafi",
+        "ayah_numbering_system": "madani_last",
+        "word_segmentation": "Bundled text split on whitespace; basmalah is part of the first ayah where present. Audio segment order is not a text word position."
+      },
+      "data/surahs.json": {
+        "ayah_numbering_system": "madani_last"
+      },
+      "munajjam_desktop/assets/data/quran_hafsh.json": {
+        "riwayah": "hafs_an_asim",
+        "ayah_numbering_system": "kufi",
+        "word_segmentation": "Bundled text split on whitespace; basmalah is part of the first ayah where present. Audio segment order is not a text word position."
+      },
+      "munajjam_desktop/assets/data/quran_warsh.json": {
+        "riwayah": "warsh_an_nafi",
+        "ayah_numbering_system": "madani_last",
+        "word_segmentation": "Bundled text split on whitespace; basmalah is part of the first ayah where present. Audio segment order is not a text word position."
+      },
+      "munajjam_desktop/assets/data/surahs.json": {
+        "ayah_numbering_system": "madani_last"
+      }
+    },
+    "exclude": [
+      "munajjam_desktop/build/**",
+      "munajjam_desktop/.dart_tool/**",
+      "python_runtime/**",
+      "Munajjam-Website/**"
+    ]
+  },
+  "paths": [
+    "munajjam_desktop/lib/services/quran_metadata.dart",
+    "quran_metadata.py"
+  ],
+  "compatibility": [
+    "munajjam_desktop/lib/**",
+    "munajjam_server.py",
+    "quran_metadata.py"
+  ],
+  "exclude": [
+    "data/**",
+    "munajjam_desktop/assets/**"
+  ]
+}

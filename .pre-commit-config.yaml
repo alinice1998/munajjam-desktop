@@ -1,0 +1,8 @@
+repos:
+  - repo: https://github.com/marqoom-specs/quranic-terminology-lint
+    rev: v0.5.0
+    hooks:
+      - id: quranic-data
+        pass_filenames: false
+        always_run: true
+        args: [data, munajjam_desktop/assets/data, examples/exports]

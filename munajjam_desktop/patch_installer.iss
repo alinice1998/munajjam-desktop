@@ -48,6 +48,7 @@ Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignorever
 Source: "..\hybrid_aligner\*.py"; DestDir: "{app}\hybrid_aligner"; Flags: ignoreversion
 Source: "..\munajjam_server.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\neural_aligner.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\quran_metadata.py"; DestDir: "{app}"; Flags: ignoreversion
 ; Required by the audio normalization and waveform extraction improvements.
 Source: "..\ffmpeg.exe"; DestDir: "{app}"; Flags: ignoreversion
 

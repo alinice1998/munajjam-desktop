@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'quran_metadata.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../models/alignment_models.dart';
@@ -45,7 +46,9 @@ class AlignerApiService {
     final request = http.MultipartRequest('POST', uri);
 
     request.fields['method'] = method;
-    request.fields['riwaya'] = riwaya;
+    // Keep the legacy field for older servers; the canonical field is authoritative.
+    request.fields['riwaya'] = QuranMetadata.legacyRiwaya(riwaya);
+    request.fields['riwayah'] = QuranMetadata.canonicalRiwayah(riwaya);
     request.fields['chunk_duration'] = chunkDuration.toString();
     request.fields['min_silence_ms'] = minSilenceMs.toString();
     request.fields['min_speech_ms'] = minSpeechMs.toString();

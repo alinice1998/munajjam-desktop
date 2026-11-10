@@ -74,3 +74,8 @@ flutter run -d windows
 
 ## 📄 الترخيص (License)
 مشروع حر ومفتوح المصدر مخصص لخدمة كتاب الله عز وجل والباحثين في معالجة الصوتيات القرآنية.
+
+
+## Marqoom data interoperability
+
+Exports and API responses now declare their riwayah and ayah numbering. See [the integration guide](docs/marqoom-integration.md) for format version 2, legacy compatibility, validation, and remaining source-data findings.

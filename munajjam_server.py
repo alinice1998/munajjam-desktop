@@ -20,7 +20,7 @@ import tempfile
 import threading
 import subprocess
 from contextlib import asynccontextmanager
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, FileResponse
@@ -33,6 +33,7 @@ import numpy as np
 
 # Import our neural aligner
 from neural_aligner import ZipformerNeuralAligner
+from quran_metadata import legacy_riwaya, describe_riwayah
 
 # Base Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -106,9 +107,9 @@ app.add_middleware(
 
 def load_quran_surah_text(surah_id: int, riwaya: str = "hafsh") -> List[str]:
     """تحميل نصوص الآيات للسورة المحددة من ملفات البيانات المحلية"""
-    json_path = os.path.join(DATA_DIR, f"quran_{riwaya}.json")
+    json_path = os.path.join(DATA_DIR, f"quran_{legacy_riwaya(riwaya)}.json")
     if not os.path.exists(json_path):
-        json_path = os.path.join(DATA_DIR, "quran_hafsh.json")
+        return []  # Never silently substitute Hafs for a missing Warsh asset.
     
     if not os.path.exists(json_path):
         return []
@@ -309,6 +310,7 @@ async def create_align_job(
     file: Optional[UploadFile] = File(None),
     audio: Optional[UploadFile] = File(None),
     riwaya: str = Form("hafsh"),
+    riwayah: Optional[Literal["hafs_an_asim", "warsh_an_nafi"]] = Form(None),
     method: str = Form("hybrid"),
     chunk_duration: float = Form(2.0),
     min_silence_ms: Optional[int] = Form(None),
@@ -328,6 +330,10 @@ async def create_align_job(
     job_id = f"job_{int(time.time() * 1000)}_{os.urandom(4).hex()}"
     
     # 1. التحقق من نصوص الآيات
+    try:
+        riwaya = legacy_riwaya(riwayah or riwaya)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     ayahs = []
     if ayahs_text and ayahs_text.strip():
         ayahs = [a.strip() for a in ayahs_text.strip().split("\n") if a.strip()]
@@ -361,6 +367,7 @@ async def create_align_job(
         "total_seconds": 0.0,
         "result": None,
         "error": None,
+        "quran_metadata": {**describe_riwayah(riwaya), "surah_number": surah_id},
         "start_time": time.time()
     }
 
@@ -382,6 +389,8 @@ async def create_align_job(
     )
 
     return {
+        **describe_riwayah(riwaya),
+        "surah_number": surah_id,
         "status": "success",
         "job_id": job_id,
         "message": "تم استلام الملف الصوتي وبدء التزمين في الخلفية بنجاح"
@@ -404,6 +413,7 @@ def get_align_job_status(job_id: str):
     breath_groups = res.get("breath_groups") or []
     
     return {
+        **job.get("quran_metadata", {}),
         "job_id": job_id,
         "status": status_str,
         "progress": int(job["progress"]),
@@ -423,6 +433,7 @@ async def align_audio_async(
     ayahs_text: Optional[str] = Form(None),
     surah_id: int = Form(1),
     riwaya: str = Form("hafsh"),
+    riwayah: Optional[Literal["hafs_an_asim", "warsh_an_nafi"]] = Form(None),
     chunk_duration: float = Form(2.0),
     min_silence_ms: Optional[int] = Form(None),
     min_speech_ms: Optional[int] = Form(None),
@@ -437,6 +448,7 @@ async def align_audio_async(
         background_tasks=background_tasks,
         file=upload_file,
         riwaya=riwaya,
+        riwayah=riwayah,
         method=method,
         chunk_duration=chunk_duration,
         min_silence_ms=min_silence_ms,
@@ -451,6 +463,7 @@ async def align_audio_endpoint(
     ayahs_text: Optional[str] = Form(None),
     surah_id: int = Form(1),
     riwaya: str = Form("hafsh"),
+    riwayah: Optional[Literal["hafs_an_asim", "warsh_an_nafi"]] = Form(None),
     chunk_duration: float = Form(2.0),
     min_silence_ms: Optional[int] = Form(None),
     min_speech_ms: Optional[int] = Form(None),
@@ -460,6 +473,10 @@ async def align_audio_endpoint(
     """
     نقطة النهاية المتزامنة للمحاذاة المباشرة
     """
+    try:
+        riwaya = legacy_riwaya(riwayah or riwaya)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     ayahs = []
     if ayahs_text and ayahs_text.strip():
         ayahs = [a.strip() for a in ayahs_text.strip().split("\n") if a.strip()]
@@ -505,7 +522,7 @@ async def align_audio_endpoint(
                     method=method
                 )
 
-        return res
+        return {**res, **describe_riwayah(riwaya), "surah_number": surah_id}
 
     except Exception as e:
         import traceback
