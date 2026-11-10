@@ -678,7 +678,7 @@ class HybridQuranAligner:
                         "word": w_item["word"],
                         "start": round(global_start, 3),
                         "end": round(global_end, 3),
-                        "confidence": w_item.get("confidence", 1.0)
+                        "confidence": w_item.get("confidence")
                     }
                     group_aligned_words.append(w_dict)
                     orig_w_idx = group_word_indices[local_i]
@@ -865,7 +865,7 @@ class HybridQuranAligner:
                                         "word": sub_w["word"],
                                         "start": round(g_s + sub_w["start"], 3),
                                         "end": round(g_s + sub_w["end"], 3),
-                                        "confidence": sub_w.get("confidence", 1.0),
+                                        "confidence": sub_w.get("confidence"),
                                         "ayah_number": a_num,
                                         "is_repetition": is_this_rep,
                                         "repetition_type": rep_type if is_this_rep else None

@@ -1,7 +1,9 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../models/alignment_models.dart';
 import '../../providers/alignment_provider.dart';
@@ -22,7 +24,11 @@ class KaraokePlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final alignProvider = context.watch<AlignmentProvider>();
+    context.select(
+      (AlignmentProvider p) =>
+          (p.alignmentRevision, p.currentSegmentIndex, p.currentBreathIndex),
+    );
+    final alignProvider = context.read<AlignmentProvider>();
     final isRTL = localeCode == 'ar';
     final audioService = AudioService();
     final segments = alignProvider.segments;
@@ -47,9 +53,16 @@ class KaraokePlayer extends StatelessWidget {
             const boundaryBuffer = 0.08;
             for (int i = 0; i < segments.length; i++) {
               final segment = segments[i];
-              final nextStart = i < segments.length - 1 ? segments[i + 1].start : double.infinity;
-              final cappedUpperBound = min(segment.end, nextStart - boundaryBuffer);
-              final upperBound = cappedUpperBound > segment.start ? cappedUpperBound : segment.end;
+              final nextStart = i < segments.length - 1
+                  ? segments[i + 1].start
+                  : double.infinity;
+              final cappedUpperBound = min(
+                segment.end,
+                nextStart - boundaryBuffer,
+              );
+              final upperBound = cappedUpperBound > segment.start
+                  ? cappedUpperBound
+                  : segment.end;
 
               if (currentTime >= segment.start && currentTime < upperBound) {
                 currentSegment = segment;
@@ -81,12 +94,14 @@ class KaraokePlayer extends StatelessWidget {
           if (breathGroups.isNotEmpty) {
             for (int i = 0; i < breathGroups.length; i++) {
               final bg = breathGroups[i];
-              if (currentTime >= bg.startTime && currentTime <= bg.endTime + 0.05) {
+              if (currentTime >= bg.startTime &&
+                  currentTime <= bg.endTime + 0.05) {
                 currentBreathGroup = bg;
                 break;
               }
             }
-            if (currentBreathGroup == null && alignProvider.currentBreathIndex != null) {
+            if (currentBreathGroup == null &&
+                alignProvider.currentBreathIndex != null) {
               final bIdx = alignProvider.currentBreathIndex!;
               if (bIdx < breathGroups.length) {
                 currentBreathGroup = breathGroups[bIdx];
@@ -100,7 +115,9 @@ class KaraokePlayer extends StatelessWidget {
             final words = currentSegment.words;
             for (int i = 0; i < words.length; i++) {
               final w = words[i];
-              final nextStart = i < words.length - 1 ? words[i + 1].start : w.end;
+              final nextStart = i < words.length - 1
+                  ? words[i + 1].start
+                  : w.end;
               final upperBound = max(w.end, nextStart);
               if (currentTime >= w.start && currentTime < upperBound) {
                 activeWordIndex = i;
@@ -132,7 +149,11 @@ class KaraokePlayer extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.mic_none_rounded, color: AppColors.primaryEmerald, size: 16),
+                      const Icon(
+                        Icons.mic_none_rounded,
+                        color: AppColors.primaryEmerald,
+                        size: 16,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         isRTL ? 'الآية الحالية' : 'CURRENT AYAH',
@@ -148,7 +169,10 @@ class KaraokePlayer extends StatelessWidget {
                   const Spacer(),
                   if (currentBreathGroup != null) ...[
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: currentBreathGroup.isRepetition
                             ? AppColors.repetitionPurple.withValues(alpha: 0.2)
@@ -156,7 +180,9 @@ class KaraokePlayer extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: currentBreathGroup.isRepetition
-                              ? AppColors.repetitionPurple.withValues(alpha: 0.5)
+                              ? AppColors.repetitionPurple.withValues(
+                                  alpha: 0.5,
+                                )
                               : AppColors.primaryTeal.withValues(alpha: 0.3),
                         ),
                       ),
@@ -164,7 +190,11 @@ class KaraokePlayer extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (currentBreathGroup.isRepetition) ...[
-                            const Icon(Icons.repeat_rounded, size: 12, color: AppColors.repetitionPurple),
+                            const Icon(
+                              Icons.repeat_rounded,
+                              size: 12,
+                              color: AppColors.repetitionPurple,
+                            ),
                             const SizedBox(width: 4),
                           ],
                           Text(
@@ -185,14 +215,21 @@ class KaraokePlayer extends StatelessWidget {
                     const SizedBox(width: 6),
                   ],
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       'الآية ${currentSegment.ayahNumber}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -203,7 +240,10 @@ class KaraokePlayer extends StatelessWidget {
               // Main Quran Display Box with Fluid Word-by-Word Glowing Highlight
               Container(
                 constraints: const BoxConstraints(minHeight: 110),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -222,34 +262,60 @@ class KaraokePlayer extends StatelessWidget {
                         spacing: 8,
                         runSpacing: 10,
                         textDirection: TextDirection.rtl,
-                        children: List.generate(currentSegment.words.length, (idx) {
+                        children: List.generate(currentSegment.words.length, (
+                          idx,
+                        ) {
                           final w = currentSegment!.words[idx];
                           final isWordActive = idx == activeWordIndex;
                           final isRep = w.isRepetition;
 
                           return InkWell(
-                            onTap: () => audioService.playSnippet(w.start, w.end),
+                            onTap: () =>
+                                audioService.playSnippet(w.start, w.end),
                             borderRadius: BorderRadius.circular(12),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 100),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
                               decoration: BoxDecoration(
                                 color: isWordActive
-                                    ? (isRep ? AppColors.repetitionPurple.withValues(alpha: 0.35) : AppColors.primaryEmerald.withValues(alpha: 0.3))
-                                    : (isRep ? AppColors.repetitionBadgeBg : Colors.transparent),
+                                    ? (isRep
+                                          ? AppColors.repetitionPurple
+                                                .withValues(alpha: 0.35)
+                                          : AppColors.primaryEmerald.withValues(
+                                              alpha: 0.3,
+                                            ))
+                                    : (isRep
+                                          ? AppColors.repetitionBadgeBg
+                                          : Colors.transparent),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: isWordActive
-                                      ? (isRep ? AppColors.repetitionPurple.withValues(alpha: 0.8) : AppColors.primaryEmerald.withValues(alpha: 0.8))
-                                      : (isRep ? AppColors.repetitionPurple.withValues(alpha: 0.3) : Colors.transparent),
+                                      ? (isRep
+                                            ? AppColors.repetitionPurple
+                                                  .withValues(alpha: 0.8)
+                                            : AppColors.primaryEmerald
+                                                  .withValues(alpha: 0.8))
+                                      : (isRep
+                                            ? AppColors.repetitionPurple
+                                                  .withValues(alpha: 0.3)
+                                            : Colors.transparent),
                                   width: 1.5,
                                 ),
                                 boxShadow: isWordActive
                                     ? [
                                         BoxShadow(
-                                          color: (isRep ? AppColors.repetitionPurple : AppColors.primaryEmerald).withValues(alpha: 0.45),
+                                          color:
+                                              (isRep
+                                                      ? AppColors
+                                                            .repetitionPurple
+                                                      : AppColors
+                                                            .primaryEmerald)
+                                                  .withValues(alpha: 0.45),
                                           blurRadius: 18,
-                                        )
+                                        ),
                                       ]
                                     : [],
                               ),
@@ -258,10 +324,18 @@ class KaraokePlayer extends StatelessWidget {
                                 textDirection: TextDirection.rtl,
                                 style: GoogleFonts.amiri(
                                   fontSize: 26,
-                                  fontWeight: isWordActive ? FontWeight.bold : FontWeight.normal,
+                                  fontWeight: isWordActive
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                   color: isWordActive
-                                      ? (isRep ? const Color(0xFFDDD6FE) : const Color(0xFFA7F3D0))
-                                      : (isRep ? const Color(0xFFC4B5FD) : Colors.white.withValues(alpha: 0.9)),
+                                      ? (isRep
+                                            ? const Color(0xFFDDD6FE)
+                                            : const Color(0xFFA7F3D0))
+                                      : (isRep
+                                            ? const Color(0xFFC4B5FD)
+                                            : Colors.white.withValues(
+                                                alpha: 0.9,
+                                              )),
                                 ),
                               ),
                             ),
@@ -287,17 +361,37 @@ class KaraokePlayer extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ElevatedButton.icon(
-                    onPressed: () => audioService.playSnippet(currentSegment!.start, currentSegment.end),
-                    icon: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
+                    onPressed: () => audioService.playSnippet(
+                      currentSegment!.start,
+                      currentSegment.end,
+                    ),
+                    icon: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                     label: const Text(
                       'تشغيل الآية فقط',
-                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryEmerald.withValues(alpha: 0.35),
-                      side: BorderSide(color: AppColors.primaryEmerald.withValues(alpha: 0.4)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      backgroundColor: AppColors.primaryEmerald.withValues(
+                        alpha: 0.35,
+                      ),
+                      side: BorderSide(
+                        color: AppColors.primaryEmerald.withValues(alpha: 0.4),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -306,16 +400,31 @@ class KaraokePlayer extends StatelessWidget {
                       audioService.seek(currentSegment!.start);
                       audioService.play();
                     },
-                    icon: const Icon(Icons.fast_forward_rounded, color: Colors.white, size: 16),
+                    icon: const Icon(
+                      Icons.fast_forward_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                     label: const Text(
                       'تشغيل مستمر',
-                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     style: OutlinedButton.styleFrom(
                       backgroundColor: Colors.white.withValues(alpha: 0.1),
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ],
@@ -329,31 +438,44 @@ class KaraokePlayer extends StatelessWidget {
                 children: [
                   Text(
                     'البداية: ${_formatSegmentTime(currentSegment.start)}',
-                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: AppColors.textSecondary),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Text(
                     'النهاية: ${_formatSegmentTime(currentSegment.end)}',
-                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: AppColors.textSecondary),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                  if (currentSegment.similarity < 1.0) ...[
+                  if (currentSegment.reliability < 1.0) ...[
                     const SizedBox(width: 16),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
                           'الدقة: ',
-                          style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                         Text(
-                          '${(currentSegment.similarity * 100).toStringAsFixed(1)}%',
+                          '${(currentSegment.reliability * 100).toStringAsFixed(1)}%',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'monospace',
-                            color: currentSegment.similarity >= 0.95
+                            color: currentSegment.reliability >= 0.95
                                 ? AppColors.scoreHigh
-                                : (currentSegment.similarity >= 0.90 ? AppColors.scoreMed : AppColors.scoreLow),
+                                : (currentSegment.reliability >= 0.90
+                                      ? AppColors.scoreMed
+                                      : AppColors.scoreLow),
                           ),
                         ),
                       ],

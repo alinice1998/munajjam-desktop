@@ -14,6 +14,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 
 import re
 import numpy as np
+from .alignment_confidence import word_alignment_confidence
 from typing import List, Dict, Any, Tuple, Optional
 
 try:
@@ -443,7 +444,10 @@ class Wav2Vec2ForcedAligner:
             refined_results.append({
                 "word": item["original_word"],
                 "start": round(float(w_start_sec), 3),
-                "end": round(float(w_end_sec), 3)
+                "end": round(float(w_end_sec), 3),
+                "confidence": word_alignment_confidence(
+                    log_probs, path, tokens_list, s_tok, e_tok, w_frames
+                ),
             })
 
         return refined_results

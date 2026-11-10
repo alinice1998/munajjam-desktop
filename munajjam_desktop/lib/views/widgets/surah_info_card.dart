@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/localization/app_locale.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/alignment_provider.dart';
@@ -12,7 +13,10 @@ class SurahInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final alignProvider = context.watch<AlignmentProvider>();
+    context.select(
+      (AlignmentProvider p) => (p.alignmentRevision, p.selectedSurahId),
+    );
+    final alignProvider = context.read<AlignmentProvider>();
     final surah = alignProvider.currentSurah;
     final isRTL = localeCode == 'ar';
     final avgSim = alignProvider.averageSimilarity;
@@ -41,7 +45,9 @@ class SurahInfoCard extends StatelessWidget {
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primaryEmerald.withOpacity(0.4)),
+              border: Border.all(
+                color: AppColors.primaryEmerald.withOpacity(0.4),
+              ),
             ),
             alignment: Alignment.center,
             child: Text(
@@ -58,7 +64,9 @@ class SurahInfoCard extends StatelessWidget {
 
           // Surah Name (Arabic & English)
           Column(
-            crossAxisAlignment: isRTL ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+            crossAxisAlignment: isRTL
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
@@ -71,10 +79,7 @@ class SurahInfoCard extends StatelessWidget {
               ),
               Text(
                 isRTL ? surah.nameTransliteration : surah.nameArabic,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -96,7 +101,10 @@ class SurahInfoCard extends StatelessWidget {
               const SizedBox(width: 12),
               if (alignProvider.segments.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: avgSim >= 0.95
                         ? AppColors.scoreHigh.withOpacity(0.15)
@@ -109,11 +117,17 @@ class SurahInfoCard extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    '${(avgSim * 100).toStringAsFixed(1)}% ${AppLocale.get(context, 'avg', localeCode: localeCode)}',
+                    avgSim.isFinite
+                        ? '${(avgSim * 100).toStringAsFixed(1)}% ${AppLocale.get(context, 'avg', localeCode: localeCode)}'
+                        : (isRTL
+                              ? 'الموثوقية غير متاحة'
+                              : 'Confidence unavailable'),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: avgSim >= 0.95 ? AppColors.scoreHigh : AppColors.scoreMed,
+                      color: avgSim >= 0.95
+                          ? AppColors.scoreHigh
+                          : AppColors.scoreMed,
                     ),
                   ),
                 ),

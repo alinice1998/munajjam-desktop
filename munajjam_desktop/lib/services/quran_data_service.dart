@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import 'package:flutter/services.dart';
+
 import '../models/alignment_models.dart';
 
 class QuranDataService {
@@ -14,21 +16,32 @@ class QuranDataService {
   Future<void> loadData() async {
     if (_loaded) return;
     try {
-      final hafshString = await rootBundle.loadString('assets/data/quran_hafsh.json');
+      final hafshString = await rootBundle.loadString(
+        'assets/data/quran_hafsh.json',
+      );
       final Map<String, dynamic> hafshJson = jsonDecode(hafshString);
-      _hafshData = hafshJson.map((k, v) => MapEntry(k, (v as List).map((e) => e.toString()).toList()));
+      _hafshData = hafshJson.map(
+        (k, v) => MapEntry(k, (v as List).map((e) => e.toString()).toList()),
+      );
     } catch (_) {}
 
     try {
-      final warshString = await rootBundle.loadString('assets/data/quran_warsh.json');
+      final warshString = await rootBundle.loadString(
+        'assets/data/quran_warsh.json',
+      );
       final Map<String, dynamic> warshJson = jsonDecode(warshString);
-      _warshData = warshJson.map((k, v) => MapEntry(k, (v as List).map((e) => e.toString()).toList()));
+      _warshData = warshJson.map(
+        (k, v) => MapEntry(k, (v as List).map((e) => e.toString()).toList()),
+      );
     } catch (_) {}
 
     _loaded = true;
   }
 
-  Future<List<String>> getSurahAyahs(int surahId, {String riwaya = 'hafsh'}) async {
+  Future<List<String>> getSurahAyahs(
+    int surahId, {
+    String riwaya = 'hafsh',
+  }) async {
     await loadData();
     final key = surahId.toString();
     if (riwaya == 'warsh' && _warshData.containsKey(key)) {
@@ -40,20 +53,29 @@ class QuranDataService {
     return [];
   }
 
-  List<AyahSegment> mergeQuranTextIntoSegments(List<AyahSegment> segments, List<String> quranText) {
+  List<AyahSegment> mergeQuranTextIntoSegments(
+    List<AyahSegment> segments,
+    List<String> quranText,
+  ) {
     if (quranText.isEmpty) return segments;
 
     final result = <AyahSegment>[];
     for (int i = 0; i < segments.length; i++) {
       final seg = segments[i];
-      final text = i < quranText.length ? quranText[i] : seg.text;
+      final textIndex = seg.ayahNumber - 1;
+      final text = textIndex >= 0 && textIndex < quranText.length
+          ? quranText[textIndex]
+          : seg.text;
       result.add(seg.copyWith(text: text));
     }
     return result;
   }
 
   /// فك وتحليل ملفات التزمين الخارجية بصيغ JSON المختلفة
-  Map<String, dynamic>? parseAlignmentJson(String jsonString, {int defaultSurahId = 1}) {
+  Map<String, dynamic>? parseAlignmentJson(
+    String jsonString, {
+    int defaultSurahId = 1,
+  }) {
     try {
       final dynamic decoded = jsonDecode(jsonString);
       if (decoded is! Map<String, dynamic>) return null;
@@ -91,15 +113,19 @@ class QuranDataService {
             continue;
           }
 
-          final isRep = s['has_repeated_words'] == true || s['is_repetition'] == true;
+          final isRep =
+              s['has_repeated_words'] == true || s['is_repetition'] == true;
           final wordSeg = WordSegment(
             word: matchedText,
             start: timeFrom,
             end: timeTo,
             ayahNumber: ayahNum,
-            confidence: (s['confidence'] as num?)?.toDouble() ?? 1.0,
+            confidence: (s['confidence'] as num?)?.toDouble() ?? double.nan,
             isRepetition: isRep,
-            repetitionType: isRep ? (s['repetition_type'] ?? 'waqf_ibtida') : null,
+            isError: s['is_error'] == true || s['has_error'] == true,
+            repetitionType: isRep
+                ? (s['repetition_type'] ?? 'waqf_ibtida')
+                : null,
           );
 
           ayahWordsMap.putIfAbsent(ayahNum, () => []).add(wordSeg);
@@ -114,13 +140,15 @@ class QuranDataService {
         for (final aNum in sortedAyahKeys) {
           final wList = ayahWordsMap[aNum]!;
           wList.sort((a, b) => a.start.compareTo(b.start));
-          ayahs.add(AyahSegment(
-            ayahNumber: aNum,
-            start: wList.first.start,
-            end: wList.last.end,
-            text: wList.map((w) => w.word).join(' '),
-            words: wList,
-          ));
+          ayahs.add(
+            AyahSegment(
+              ayahNumber: aNum,
+              start: wList.first.start,
+              end: wList.last.end,
+              text: wList.map((w) => w.word).join(' '),
+              words: wList,
+            ),
+          );
         }
 
         final breaths = <BreathGroup>[];
@@ -129,34 +157,39 @@ class QuranDataService {
           for (final entry in splitGroupMap.entries) {
             final wList = entry.value;
             wList.sort((a, b) => a.start.compareTo(b.start));
-            final distinctAyahs = wList.map((w) => w.ayahNumber ?? 1).toSet().toList()..sort();
-            breaths.add(BreathGroup(
-              groupIndex: gIdx++,
-              startTime: wList.first.start,
-              endTime: wList.last.end,
-              duration: wList.last.end - wList.first.start,
-              text: wList.map((w) => w.word).join(' '),
-              words: wList,
-              ayahNumbers: distinctAyahs,
-            ));
+            final distinctAyahs =
+                wList.map((w) => w.ayahNumber ?? 1).toSet().toList()..sort();
+            breaths.add(
+              BreathGroup(
+                groupIndex: gIdx++,
+                startTime: wList.first.start,
+                endTime: wList.last.end,
+                duration: wList.last.end - wList.first.start,
+                text: wList.map((w) => w.word).join(' '),
+                words: wList,
+                ayahNumbers: distinctAyahs,
+              ),
+            );
           }
           breaths.sort((a, b) => a.startTime.compareTo(b.startTime));
           for (int i = 0; i < breaths.length; i++) {
             breaths[i].groupIndex = i + 1;
           }
         } else {
-          breaths.addAll(ayahs.asMap().entries.map((e) {
-            final s = e.value;
-            return BreathGroup(
-              groupIndex: e.key + 1,
-              startTime: s.start,
-              endTime: s.end,
-              duration: s.end - s.start,
-              text: s.text,
-              words: s.words,
-              ayahNumbers: [s.ayahNumber],
-            );
-          }));
+          breaths.addAll(
+            ayahs.asMap().entries.map((e) {
+              final s = e.value;
+              return BreathGroup(
+                groupIndex: e.key + 1,
+                startTime: s.start,
+                endTime: s.end,
+                duration: s.end - s.start,
+                text: s.text,
+                words: s.words,
+                ayahNumbers: [s.ayahNumber],
+              );
+            }),
+          );
         }
 
         return {
@@ -172,15 +205,21 @@ class QuranDataService {
       final surahId = (data['surah_id'] as num?)?.toInt() ?? defaultSurahId;
 
       if (rawAyahs != null) {
-        final ayahs = rawAyahs.map((a) => AyahSegment.fromJson(Map<String, dynamic>.from(a as Map))).toList();
+        final ayahs = rawAyahs
+            .map(
+              (a) => AyahSegment.fromJson(Map<String, dynamic>.from(a as Map)),
+            )
+            .toList();
         final breaths = rawBreaths != null
-            ? rawBreaths.map((b) => BreathGroup.fromJson(Map<String, dynamic>.from(b as Map))).toList()
+            ? rawBreaths
+                  .map(
+                    (b) => BreathGroup.fromJson(
+                      Map<String, dynamic>.from(b as Map),
+                    ),
+                  )
+                  .toList()
             : <BreathGroup>[];
-        return {
-          'surahId': surahId,
-          'ayahs': ayahs,
-          'breathGroups': breaths,
-        };
+        return {'surahId': surahId, 'ayahs': ayahs, 'breathGroups': breaths};
       }
 
       return null;
